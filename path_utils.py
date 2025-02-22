@@ -1,7 +1,8 @@
 import ast
-"""This module can be better organized."""
+from typing import Any
 
-def smart_cast(value: str) -> any:
+
+def smart_cast(value: str) -> Any:
     """Cast string to proper type."""
     if value.lower() in {"true", "false"}:
         return value.lower() == "true"
@@ -22,25 +23,27 @@ def safe_path_split(path: str, int_literal: bool = False) -> list:
     
 def path_append(path: str, new_index: str | int) -> str:
     """Append new index into given path."""
-    if path == "/" or path == "":
-        return new_index
-    
     if isinstance(new_index, int):
         new_index = str(new_index)
+    
+    if path == "/" or path == "":
+        return new_index
 
-    path: list = safe_path_split(path)
-    path.append(new_index)
-    path: str = "/".join(path)
+    indexes = safe_path_split(path)
+    indexes.append(new_index)
+    path = "/".join(indexes)
+
     return path
 
 def path_pop(path: str) -> str:
     """Remove last index in given path."""
-    path: list = safe_path_split(path)
-    path.pop()
-    path: str = "/".join(path)
+    indexes = safe_path_split(path)
+    indexes.pop()
+    path = "/".join(indexes)
+
     return path
 
-def get_data_by_path(data: any, path: str) -> any:
+def get_data_by_path(data: Any, path: str) -> Any:
     """Get data inside a data structure based in a path."""
     if path == "/" or path == "":
         return data
@@ -50,13 +53,14 @@ def get_data_by_path(data: any, path: str) -> any:
     current = data
     for i in indexes:
         current = current[i]
+
     return current
 
-def change_data_by_path(data: any, path: str, new_data: any) -> any:
+def change_data_by_path(data: Any, path: str, new_data: Any) -> Any:
     """Change data inside a data structure based in a path."""
-    path: list = safe_path_split(path)
+    indexes = safe_path_split(path)
 
-    rec_data = get_data_by_path(data, "/".join(path[:-1]))
-    rec_data[path[-1]] = new_data
+    rec_data = get_data_by_path(data, "/".join(indexes[:-1]))
+    rec_data[indexes[-1]] = new_data
 
     return data

@@ -1,12 +1,12 @@
 import argparse
-from data_path import *
-from json_utils import *
-from data_navigator import data_navigator
+from data_navigator import DataNavigator
+from file_utils import *
+from path_utils import *
 
 
 def die(msg: str) -> None:
     print(f"ERROR: {msg}")
-    exit(1)
+    exit(1) # needs better error handling
 
 def main():
     parser = argparse.ArgumentParser(prog="JSON Command Line Editor")
@@ -59,7 +59,7 @@ def main():
             save_json(args.filename, new_content)
         
         case "n":
-            data_navigator(data, args.path, args.filename, args.literal)
+            DataNavigator(data, args.path, args.filename, args.literal)
         
         case _:
             die("USAGE: [action] <filename> (args...)") # that does not help either

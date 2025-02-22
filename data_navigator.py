@@ -1,68 +1,59 @@
-from data_path import *
+import actions
+from utils import *
 from json_utils import *
+from typing import Any
+from copy import deepcopy
 
-
-def data_navigator(data: any, path: str = "", filename: str = "lipsum.json", literal: bool = False) -> None: # too big
+class DataNavigator:
     """Terminal data navigator"""
-    master_data = data
-    while True:
-        print(get_data_by_path(data, path), "\n")
+    def __init__(self,
+                 data: Any,
+                 path: str = "",
+                 filename: str = "lipsum.json",
+                 literal: bool = False) -> None:
+        self.secure_data: Any = data
+        self.data: Any = deepcopy(self.secure_data)
+        self.path = path
+        self.filename: str = filename
+        self.literal: bool = literal
+        self.commands: dict = actions.actions
 
-        index = input(f"{path}/")
-
-        match index:
-            case "\\exit":
-                break
-        
-            case "\\redo":
-                data = master_data
-
-            case "\\save":
-                save_json(filename, data)
-                print(f"Saved at {filename}.")
-
-            case "\\-l":
-                literal = False
-                print(f"Literal flag turned off.")
-
-            case "\\+l":
-                literal = True
-                print(f"Literal flag turned on.")
-
-            case "\\":
-                new_value = index[1:] if not literal else smart_cast(index[1:])
-                change_data_by_path(data, path, new_value)
-
-            case "..":
-                if path:
-                    path = path_pop(path)
+    def _move(self, index: str) -> None:
+        """Move path based on given index."""
+        for i in safe_path_split(index):
+            if isinstance(get_data_by_path(self.data, self.path), dict):
+                if i in get_data_by_path(self.data, self.path):
+                    self.path = path_append(self.path, i)
                 else:
-                    print("ERROR: You are at root level.")
+                    print("ERROR: Key not found in dictionary.")
+            
+            elif isinstance(get_data_by_path(self.data, self.path), list):
+                if i.isdigit() and 0 <= int(i) < len(get_data_by_path(self.data, self.path)):
+                    self.path = path_append(self.path, i)
+                else:
+                    print("ERROR: Invalid list index.")
 
-            case:
-                path = move(data, path, index)
-
-def move(data: any, path: str, index: str) -> str:
-    """Move path based on given index."""
-    for i in safe_path_split(index):
-        if isinstance(get_data_by_path(data, path), dict):
-            if i in get_data_by_path(data, path):
-                path = path_append(path, i)
             else:
-                print("ERROR: Key not found in dictionary.")
-        
-        elif isinstance(get_data_by_path(data, path), list):
-            if i.isdigit() and 0 <= int(i) < len(get_data_by_path(data, path)):
-                path = path_append(path, i)
+                print("ERROR: Cannot navigate into this type.")
+
+    def run(self) -> None:
+        """Run data navigator ambient"""
+        while True:
+            print(get_data_by_path(self.data, self.path), "\n")
+
+            index = input(f"{self.path}/")
+            
+            if index in self.commands:
+                self.commands[index](self)
+            elif index[0] == "\\" and len(index) >= 2:
+                new_value = index[1:] if not self.literal else smart_cast(index[1:])
+                self.data = change_data_by_path(self.data, self.path, new_value)
             else:
-                print("ERROR: Invalid list index.")
+                self._move(index)
 
-        else:
-            print("ERROR: Cannot navigate into this type.")
-
-    return path
 
 if __name__ == "__main__":
-    filename = "json_files/foo.json"
+    filename = "foo.json"
     data = open_json(filename)
-    data_navigator(data, filename=filename, literal=True)
+    dn = DataNavigator(data, filename=filename, literal=True)
+    dn.run()
