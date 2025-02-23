@@ -4,6 +4,11 @@ from file_utils import *
 from path_utils import *
 import os
 
+"""
+TO-DO: **
+3. Improve DataNavigator ambient;
+4. Add more formats.
+"""
 
 def main():
     parser = argparse.ArgumentParser(prog="JSON Command Line Editor")
@@ -44,7 +49,6 @@ def main():
 
     if os.path.isfile(args.filename):
         data = open_file(args.filename)
-        print(f"data: {data}")
     else:
         if args.make:
             data = ""
