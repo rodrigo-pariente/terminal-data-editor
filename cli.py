@@ -42,12 +42,13 @@ def main():
 
     args = parser.parse_args()
 
-    data = ""
     if os.path.isfile(args.filename):
-        data = open_json(args.filename)
+        data = open_file(args.filename)
+        print(f"data: {data}")
     else:
         if args.make:
-            save_json(args.filename, data)
+            data = ""
+            save_file(args.filename, data)
         else:
             raise SystemExit(f"File {args.filename} does not exist.")
     
@@ -60,7 +61,7 @@ def main():
         else:
             new_value = args.new_value
         new_content = change_data_by_path(data, args.path, new_value)
-        save_json(args.filename, new_content)
+        save_file(args.filename, new_content)
 
 
 if __name__ == "__main__":
