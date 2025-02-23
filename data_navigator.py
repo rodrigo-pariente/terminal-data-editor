@@ -4,6 +4,7 @@ from file_utils import *
 from typing import Any
 from copy import deepcopy
 
+
 class DataNavigator:
     """Terminal data navigator"""
     def __init__(self,
