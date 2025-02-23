@@ -1,6 +1,6 @@
-import actions
-from utils import *
-from json_utils import *
+from actions import commands
+from path_utils import *
+from file_utils import *
 from typing import Any
 from copy import deepcopy
 
@@ -16,7 +16,7 @@ class DataNavigator:
         self.path = path
         self.filename: str = filename
         self.literal: bool = literal
-        self.commands: dict = actions.actions
+        self.commands: dict = commands
 
     def _move(self, index: str) -> None:
         """Move path based on given index."""

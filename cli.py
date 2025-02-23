@@ -2,7 +2,7 @@ import argparse
 from data_navigator import DataNavigator
 from file_utils import *
 from path_utils import *
-import sys
+import os
 
 
 def die(msg: str) -> None:
@@ -47,7 +47,7 @@ def main():
     args = parser.parse_args()
 
     data = ""
-    if sys.path.isfile(args.filename):
+    if os.path.isfile(args.filename):
         data = open_json(args.filename)
     else:
         if args.make:
