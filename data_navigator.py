@@ -12,14 +12,17 @@ class DataNavigator:
                  data: Any,
                  path: Path = "",
                  filename: str = "lipsum.json",
-                 literal: bool = False,
-                 make: bool = False) -> None:
+                 literal: bool = False) -> None:
         self.data = data
         self.path = path
         self.filename = filename
         self.literal = literal
-        self.make = make
         self.commands: dict = commands
+        
+    @property
+    def cur_data(self):
+        """Return current data as given working path."""
+        return get_data_by_path(self.data, self.path) 
 
     @property
     def public(self) -> dict:
@@ -28,16 +31,16 @@ class DataNavigator:
             "data": self.data,
             "filename": self.filename,
             "literal": self.literal,
-            "make": self.make,
             "path": self.path
         }
         return public
 
     def set_flag(self, flag: str, value: bool) -> None:
+        """Set boolean public attributes."""
         if flag in self.public and isinstance(self.public[flag], bool):
             setattr(self, flag, value)
         else:
-            print("Couldn't find flag.")
+            print("Coulself't find flag.")
 
     def run(self) -> None:
         """Run data navigator REPL ambient"""
