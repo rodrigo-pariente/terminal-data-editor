@@ -1,10 +1,14 @@
+"""Module for storing DataNavigator REPL possible actions."""
+
 from collections.abc import Callable
-from data_utils import *
-from file_utils import *
 import os
+from pathlib import Path
 from pprint import pprint
 import sys
 from typing import TYPE_CHECKING
+from data_utils import smart_cast, change_data_by_path
+from file_utils import read_file, save_file
+
 
 if TYPE_CHECKING:
     from data_navigator import DataNavigator
@@ -27,10 +31,10 @@ def append_data(dn: "DataNavigator", args) -> None:
     to_compare = (new_data, dn.dn.cur_data)
     if all(isinstance(d, dict) for d in to_compare):
         dn.cur_data.update(new_data)
-    
+
     elif all(isinstance(d, list) for d in to_compare):
         dn.cur_data.extend(new_data)
-    
+
     elif all(isinstance(d, (int, float, str)) for d in to_compare):
         if isinstance(dn.cur_data, str) or isinstance(new_data, str):   
             dn.cur_data = str(dn.cur_data)
@@ -47,15 +51,15 @@ def cast_value(dn: "DataNavigator", args: list[str]) -> None:
         tmp = dn.path
         if args[0] != ".":
             dn.path = Path(args[0])
-        
+
         set(dn, [smart_cast(dn.cur_data)])
-        
+
         dn.path = tmp
     else:
         print("usage: cast <path>")
 
 @add_command("cls", "clear")
-def clear_screen(*args) -> None:
+def clear_screen(*_) -> None:
     """Clean the screen without leaving the REPL"""
     os.system("cls" if os.name == "nt" else "clear")
 
@@ -69,7 +73,7 @@ def del_key(dn: "data_navigator", indexes: list[str]) -> None:
             except (KeyError, IndexError):
                 print("No value of index {i} in data.")
         else:
-            print(f"Can only del-key from dictionary or list only.")
+            print("Can only del-key from dictionary or list only.")
 
 @add_command("del-val")
 def del_val(dn: "DataNavigator", values: list[str]) -> None:
@@ -82,26 +86,26 @@ def del_val(dn: "DataNavigator", values: list[str]) -> None:
 
         elif isinstance(dn.cur_data, dict):
             dn.cur_data = {k: v for k, v in dn.cur_data.items() if v != i}
-        
+
         elif isinstance(dn.cur_data, list):
             dn.cur_data.remove(i)
- 
+
         else:
-            print(f"Could not delete {new_data}.")
+            print(f"Could not delete {i}.")
 
 @add_command("exit", "quit")
-def exit(*args) -> None:
+def exit_repl(*_) -> None:
     """Exit the script."""
     sys.exit(0)
 
 @add_command("flag")
-def flag(dn: "DataNavigator", args) -> None:
+def flag_set(dn: "DataNavigator", args) -> None:
     """Set dn attr True or False if attr is boolean."""
     if len(args) == 2 and args[1].lower() in ("on", "off"):
         flag = args[0]
-        value = True if args[1].lower() == "on" else False
+        value = bool(args[1].lower() == "on")
         dn.set_flag(flag, value)
-    else: 
+    else:
         print("usage: flag <flag> [bool value]")
 
 @add_command("cd")
@@ -111,8 +115,8 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
         p = Path(indexes)
     else:
         p = Path("")
-        for i in range(len(indexes)):
-            p = p.joinpath(indexes[i])
+        for i in indexes:
+            p = p.joinpath(i)
 
     for i in p.parts:
         if i == "..":
@@ -126,7 +130,7 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
                 dn.path = dn.path.joinpath(i)
             else:
                 print("ERROR: Key not found in dictionary.")
-        
+
         elif isinstance(dn.cur_data, list):
             if i.isdigit() and 0 <= int(i) < len(dn.cur_data):
                 dn.path = dn.path.joinpath(i)
@@ -139,7 +143,8 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
     pprint(dn.cur_data)
 
 @add_command("ls", "list")
-def list_data(dn: "DataNavigator", *args) -> None:
+def list_data(dn: "DataNavigator", *_) -> None:
+    """Print data in current working data path."""
     pprint(dn.cur_data)
 
 @add_command("print")
@@ -152,7 +157,7 @@ def print_public(dn: "DataNavigator", var_name: list[str]) -> None:
             print(f"Couldn't find variable {var}")
 
 @add_command("restart")
-def restart(dn: "DataNavigator", *args) -> None:
+def restart(dn: "DataNavigator", *_) -> None:
     """Restart DataNavigator data to the original state."""
     dn.data = read_file(dn.filename)
     pprint(dn.cur_data)
@@ -160,21 +165,20 @@ def restart(dn: "DataNavigator", *args) -> None:
 @add_command("!")
 def run_command(_, args) -> None:
     """Let you pass shell commands without leaving the application."""
-    string_command = " ".join(args) 
+    string_command = " ".join(args)
     os.system(string_command)
 
 @add_command("save")
-def save(dn: "DataNavigator", *args) -> None:
+def save(dn: "DataNavigator", *_) -> None:
     """Save DataNavigator modified data into filename."""
-    save_json(dn.filename, dn.data)
+    save_file(dn.filename, dn.data)
     print(f"Saved at {dn.filename}.")
 
 @add_command("set")
-def set(dn: "DataNavigator", new_values: list[str], show: bool = False) -> None:
+def set_value(dn: "DataNavigator", new_values: list[str], show: bool = False) -> None:
     """Set new value in current path data."""
     for nv in new_values:
         nv = nv if not dn.literal else smart_cast(nv)
         dn.data = change_data_by_path(dn.data, dn.path, nv)
     if show:
         pprint(dn.cur_data)
-

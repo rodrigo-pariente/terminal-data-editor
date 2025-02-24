@@ -1,12 +1,15 @@
+"""CLI code for running the project."""
+
 import argparse
-from data_navigator import DataNavigator
-from file_utils import *
-from data_utils import *
 from pathlib import Path
 import os
+from data_navigator import DataNavigator
+from file_utils import read_file, save_file
+from data_utils import change_data_by_path, smart_cast
 
 
 def main():
+    """Main function."""
     parser = argparse.ArgumentParser(prog="JSON Command Line Editor")
 
     parser.add_argument(
@@ -45,7 +48,7 @@ def main():
     path = Path(args.path)
 
     if os.path.isfile(args.filename):
-       data = read_file(args.filename)
+        data = read_file(args.filename)
     else:
         if args.make:
             data = ""
@@ -53,7 +56,7 @@ def main():
         else:
             raise SystemExit(f"File {args.filename} does not exist.")
 
-    if args.new_value == None:
+    if args.new_value is None:
         dn = DataNavigator(data, path, args.filename, args.literal)
         dn.run()
     else:
@@ -67,4 +70,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

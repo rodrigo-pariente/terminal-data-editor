@@ -1,3 +1,8 @@
+"""
+Module containing data utilities, such as smart_casting for
+typefying strings,or acessing nested data based on a path.
+"""
+
 import ast
 from typing import Any
 from pathlib import Path
@@ -10,11 +15,6 @@ def smart_cast(value: str) -> Any:
         return ast.literal_eval(value)
     except (SyntaxError, ValueError):
         return value
-
-    indexes.append(new_index)
-    path = "/".join(indexes)
-
-    return path
 
 def get_data_by_path(data: Any, path: Path) -> Any:
     """Get data inside a data structure based in a path."""

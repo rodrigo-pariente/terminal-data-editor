@@ -1,10 +1,13 @@
-from actions import commands
-from file_utils import *
-from data_utils import *
+"""
+Module for setting class DataNavigator for
+creating a REPL ambient as an object.
+"""
+
 from pathlib import Path
 from pprint import pprint
 from typing import Any
-
+from actions import commands
+from data_utils import get_data_by_path
 
 class DataNavigator:
     """Terminal data navigator"""
@@ -18,7 +21,7 @@ class DataNavigator:
         self.filename = filename
         self.literal = literal
         self.commands: dict = commands
-        
+
     @property
     def cur_data(self):
         """Return current data as given working path."""
@@ -46,8 +49,8 @@ class DataNavigator:
         """Run data navigator REPL ambient"""
         pprint(get_data_by_path(self.data, self.path))
         while True:
-            command, *args = input(f">>>").split(" ")
-            
+            command, *args = input(">>>").split(" ")
+
             if command in self.commands:
                 self.commands[command](self, args)
             else:
