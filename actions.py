@@ -11,35 +11,35 @@ if TYPE_CHECKING:
 
 commands = {}
 
-def add_command(command: str) -> Callable:
+def add_command(*commands_list: list[str]) -> Callable:
     """Decorator to add new commands automaticaly to commands dictionary."""
     def wrapper(func):
-        commands[command] = func
+        for command in commands_list:
+            commands[command] = func
         return func
     return wrapper
 
-@add_command("append") # has a problem on appending data passed with spaces char
-def append_data(dn: "DataNavigator", args):
+@add_command("append")
+def append_data(dn: "DataNavigator", args) -> None:
     """Append data in current path without rewriting all data to maintain."""
     masked_data = get_data_by_path(dn.data, dn.path)
     
-    for arg in args:
-        current = smart_cast(arg)
-        to_compare = [current, masked_data]
-        if all(isinstance(d, dict) for d in to_compare):
-            masked_data.update(current)
-        
-        elif all(isinstance(d, list) for d in to_compare):
-            masked_data.extend(current)
-        
-        elif all(isinstance(d, (int, float, str)) for d in to_compare):
-            masked_data = {masked_data} + {current}
-        
-        else:
-            print(f"Could not append {current}.")
+    new_data = args.join(" ")
 
-@add_command("quit")
-@add_command("exit")
+    to_compare = [new_data, masked_data]
+    if all(isinstance(d, dict) for d in to_compare):
+        masked_data.update(new_data)
+    
+    elif all(isinstance(d, list) for d in to_compare):
+        masked_data.extend(new_data)
+    
+    elif all(isinstance(d, (int, float, str)) for d in to_compare):
+        masked_data = {masked_data} + {new_data}
+    
+    else:
+        print(f"Could not append {new_data}.")
+
+@add_command("exit", "quit")
 def exit(*args) -> None:
     """Exit the script."""
     sys.exit(0)
@@ -88,9 +88,8 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
         else:
             print("ERROR: Cannot navigate into this type.")
 
-@add_command("ls")
-@add_command("list")
-def list_data(dn: "DataNavigator", *args):
+@add_command("ls", "list")
+def list_data(dn: "DataNavigator", *args) -> None:
     pprint(get_data_by_path(dn.data, dn.path))
 
 @add_command("restart")
@@ -125,5 +124,6 @@ def print_public(dn: "DataNavigator", var_name: list[str]) -> None:
 @add_command("!")
 def run_command(_, args) -> None:
     """Let you pass shell commands without leaving the application."""
-    os.system(*args)
+    string_command = " ".join(args) 
+    os.system(string_command)
 
