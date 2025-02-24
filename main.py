@@ -1,13 +1,14 @@
 import argparse
 from data_navigator import DataNavigator
 from file_utils import *
-from path_utils import *
+from data_utils import *
+from pathlib import Path
 import os
 
 """
-TO-DO: **
-3. Improve DataNavigator ambient;
-4. Add more formats.
+TO-DO: ***
+1. Clean things.
+2. Add more formats.
 """
 
 def main():
@@ -46,27 +47,29 @@ def main():
     )
 
     args = parser.parse_args()
+    path = Path(args.path)
 
     if os.path.isfile(args.filename):
-        data = open_file(args.filename)
+       data = read_file(args.filename)
     else:
         if args.make:
             data = ""
             save_file(args.filename, data)
         else:
             raise SystemExit(f"File {args.filename} does not exist.")
-    
+
     if args.new_value == None:
-        dn = DataNavigator(data, args.path, args.filename, args.literal)
+        dn = DataNavigator(data, path, args.filename, args.literal)
         dn.run()
     else:
         if args.literal:
             new_value = smart_cast(args.new_value)
         else:
             new_value = args.new_value
-        new_content = change_data_by_path(data, args.path, new_value)
+        new_content = change_data_by_path(data, path, new_value)
         save_file(args.filename, new_content)
 
 
 if __name__ == "__main__":
     main()
+

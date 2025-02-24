@@ -1,7 +1,7 @@
 from actions import commands
-from copy import deepcopy
 from file_utils import *
-from path_utils import *
+from data_utils import *
+from pathlib import Path
 from pprint import pprint
 from typing import Any
 
@@ -10,34 +10,40 @@ class DataNavigator:
     """Terminal data navigator"""
     def __init__(self,
                  data: Any,
-                 path: str = "",
+                 path: Path = "",
                  filename: str = "lipsum.json",
-                 literal: bool = False) -> None:
-        self.secure_data = data
-        self.data = deepcopy(self.secure_data)
+                 literal: bool = False,
+                 make: bool = False) -> None:
+        self.data = data
         self.path = path
         self.filename = filename
         self.literal = literal
+        self.make = make
         self.commands: dict = commands
-    
+
     @property
-    def public_vars(self) -> dict:
+    def public(self) -> dict:
+        """Public variables that can be acessed externally."""
         public = {
-            "commands": self.commands,
             "data": self.data,
             "filename": self.filename,
             "literal": self.literal,
+            "make": self.make,
             "path": self.path
         }
         return public
 
+    def set_flag(self, flag: str, value: bool) -> None:
+        if flag in self.public and isinstance(self.public[flag], bool):
+            setattr(self, flag, value)
+        else:
+            print("Couldn't find flag.")
+
     def run(self) -> None:
         """Run data navigator REPL ambient"""
+        pprint(get_data_by_path(self.data, self.path))
         while True:
-            pprint(get_data_by_path(self.data, self.path))
-            print("\n")
-
-            command, *args = input(f"  >").split(" ")
+            command, *args = input(f">>>").split(" ")
             
             if command in self.commands:
                 self.commands[command](self, args)
