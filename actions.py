@@ -59,12 +59,28 @@ def clear_screen(*args) -> None:
     """Clean the screen without leaving the REPL"""
     os.system("cls" if os.name == "nt" else "clear")
 
-@add_command("rm", "del", "delete")
-def delete_value(dn: "DataNavigator", values: list[str]) -> None:
+@add_command("del-key")
+def del_key(dn: "data_navigator", indexes: list[str]) -> None:
+    """Delete data based on given index."""
+    for i in indexes:
+        if isinstance(dn.cur_data, (dict, list)):
+            try:
+                dn.cur_data.pop(i)
+            except (KeyError, IndexError):
+                print("No value of index {i} in data.")
+        else:
+            print(f"Can only del-key from dictionary or list only.")
+
+@add_command("del-val")
+def del_val(dn: "DataNavigator", values: list[str]) -> None:
     """Delete value, key or item based on given value."""
 
     for i in values:
-        if isinstance(dn.cur_data, dict):
+        if i == ".":
+            set(dn, ["None"], show=False)
+            cast_value(dn, ["."]) # make sure deleted value now is NoneType
+
+        elif isinstance(dn.cur_data, dict):
             dn.cur_data = {k: v for k, v in dn.cur_data.items() if v != i}
         
         elif isinstance(dn.cur_data, list):
@@ -126,18 +142,6 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
 def list_data(dn: "DataNavigator", *args) -> None:
     pprint(dn.cur_data)
 
-@add_command("pop")
-def pop_index(dn: "data_navigator", indexes: list[str]) -> None:
-    """Delete data based on given index."""
-    for i in indexes:
-        if isinstance(dn.cur_data, (dict, list)):
-            try:
-                dn.cur_data.pop(i)
-            except (KeyError, IndexError):
-                print("No value of index {i} in data.")
-        else:
-            print(f"Can only pop from dictionary or list only.")
-
 @add_command("print")
 def print_public(dn: "DataNavigator", var_name: list[str]) -> None:
     """Show variable value based on it's name."""
@@ -166,10 +170,11 @@ def save(dn: "DataNavigator", *args) -> None:
     print(f"Saved at {dn.filename}.")
 
 @add_command("set")
-def set(dn: "DataNavigator", new_values: list[str]) -> None:
+def set(dn: "DataNavigator", new_values: list[str], show: bool = False) -> None:
     """Set new value in current path data."""
     for nv in new_values:
         nv = nv if not dn.literal else smart_cast(nv)
         dn.data = change_data_by_path(dn.data, dn.path, nv)
-    pprint(dn.cur_data)
+    if show:
+        pprint(dn.cur_data)
 

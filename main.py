@@ -5,11 +5,6 @@ from data_utils import *
 from pathlib import Path
 import os
 
-"""
-TO-DO: ***
-1. Clean things.
-2. Add more formats.
-"""
 
 def main():
     parser = argparse.ArgumentParser(prog="JSON Command Line Editor")
