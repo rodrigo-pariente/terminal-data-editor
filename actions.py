@@ -36,7 +36,7 @@ def append_data(dn: "DataNavigator", args) -> None:
             dn.cur_data.extend(new_data)
 
         case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
-            if isinstance(dn.cur_data, str) or isinstance(new_data, str):   
+            if isinstance(dn.cur_data, str) or isinstance(new_data, str):
                 dn.cur_data = str(dn.cur_data)
                 new_data = str(new_data)
             dn.cur_data = f"{dn.cur_data + new_data}"
@@ -78,7 +78,6 @@ def del_key(dn: "data_navigator", indexes: list[str]) -> None:
 @add_command("del-val")
 def del_val(dn: "DataNavigator", values: list[str]) -> None:
     """Delete value, key or item based on given value."""
-
     for i in values:
         if i == ".":
             dn.cur_data = "None" # must be improved
@@ -111,29 +110,23 @@ def flag_set(dn: "DataNavigator", args) -> None:
 @add_command("cd")
 def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
     """Move path based on given indexes."""
-    if isinstance(indexes, str):
-        p = Path(indexes)
-    else:
-        p = Path("")
-        for i in indexes:
-            p = p.joinpath(i)
+    def is_index(index: str, data: dict | list) -> bool:
+        if isinstance(data, dict):
+            return index in data
+        if isinstance(data, list):
+            return index.isdigit() and int(index) in range(len(data))
+        return False
 
-    for i in p.parts:
-        match dn.cur_data:
-            case _ if i == "..":
-                if dn.path.as_posix() != ".":
-                    dn.path = dn.path.parent
-                else:
-                    print("ERROR: You are at root level.")
-
-            case dict() if i in dn.cur_data:
-                dn.path = dn.path.joinpath(i)
-
-            case list() if i.isdigit() and 0 <= int(i) < len(dn.cur_data):
-                dn.path = dn.path.joinpath(i)
-
-            case _:
-                print("ERROR: Cannot navigate into this type.")
+    for i in indexes:
+        if i == "..":
+            if dn.path.as_posix() != ".":
+                dn.path = dn.path.parent
+            else:
+                print("ERROR: You are at root level.")
+        elif is_index(i, dn.cur_data):
+            dn.path = dn.path.joinpath(i)
+        else:
+            print("ERROR: Cannot navigate into this type.")
 
     pprint(dn.cur_data)
 
