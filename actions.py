@@ -98,7 +98,7 @@ def exit_repl(*_) -> None:
     sys.exit(0)
 
 @add_command("flag")
-def flag_set(dn: "DataNavigator", args: list[str, str]) -> None:
+def set_flag(dn: "DataNavigator", args: list[str, str]) -> None:
     """Set DataNavigator flag True or False."""
     two_args = len(args) == 2
     args_are_str = all(isinstance(arg, str) for arg in args)
@@ -107,7 +107,7 @@ def flag_set(dn: "DataNavigator", args: list[str, str]) -> None:
     if two_args and args_are_str and value_is_valid:
         flag = args[0]
         value = bool(args[1].lower() == "on")
-        dn.set_flag(flag, value)
+        dn.flag_setter(flag, value)
     else:
         print("usage: flag <flag> [bool value]")
 

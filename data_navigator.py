@@ -44,7 +44,7 @@ class DataNavigator:
         }
         return public
 
-    def set_flag(self, flag: str, value: bool) -> None:
+    def flag_setter(self, flag: str, value: bool) -> None:
         """Set boolean public attributes."""
         if flag in self.public and isinstance(self.public[flag], bool):
             setattr(self, flag, value)
