@@ -13,7 +13,7 @@ class DataNavigator:
     """Terminal data navigator"""
     def __init__(self,
                  data: Any,
-                 path: Path = "",
+                 path: Path = Path(),
                  filename: str = "lipsum.json",
                  literal: bool = False) -> None:
         self.data = data
@@ -22,16 +22,31 @@ class DataNavigator:
         self.literal = literal
         self.commands: dict = commands
 
-    @property
-    def cur_data(self) -> Any:
-        """Return current data as given working path."""
-        return get_data_by_path(self.data, self.path)
+    def get_data(self, path: Path | str = "current") -> Any:
+        """Get DataNavigator based on a path, current if none is given."""
+        if isinstance(path, str) and path.lower() == "current":
+            path = self.path
 
-    @cur_data.setter
-    def cur_data(self, value: Any) -> None:
-        """Setter for easy changes in data of current working path"""
-        value = smart_cast(value) if self.literal else value
-        self.data = change_data_by_path(self.data, self.path, value)
+        return get_data_by_path(self.data, path)
+
+    def change_data(self,
+                    new_value: Any,
+                    path: Path | str = "current",
+                    force_type: bool = False) -> None:
+        """
+        Change DataNavigator data based on a path, current if none is given.
+        Can force value to be or not casted.
+        """
+        if isinstance(path, str) and path.lower() == "current":
+            path = self.path
+
+        if not force_type:
+            if self.literal:
+                new_value = smart_cast(new_value)
+            else:
+                new_value = str(new_value)
+
+        self.data = change_data_by_path(self.data, path, new_value)
 
     @property
     def public(self) -> dict:
@@ -55,7 +70,7 @@ class DataNavigator:
         """Run data navigator REPL ambient"""
         pprint(get_data_by_path(self.data, self.path))
         while True:
-            command, *args = input(">>>").split(" ")
+            command, *args = input(">>>").strip().split()
 
             if command in self.commands:
                 self.commands[command](self, args)
