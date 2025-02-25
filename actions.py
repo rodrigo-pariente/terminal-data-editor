@@ -98,9 +98,13 @@ def exit_repl(*_) -> None:
     sys.exit(0)
 
 @add_command("flag")
-def flag_set(dn: "DataNavigator", args) -> None:
-    """Set dn attr True or False if attr is boolean."""
-    if len(args) == 2 and args[1].lower() in ("on", "off"):
+def flag_set(dn: "DataNavigator", args: list[str, str]) -> None:
+    """Set DataNavigator flag True or False."""
+    two_args = len(args) == 2
+    args_are_str = all(isinstance(arg, str) for arg in args)
+    value_is_valid = args[1] in ("on", "off")
+
+    if two_args and args_are_str and value_is_valid:
         flag = args[0]
         value = bool(args[1].lower() == "on")
         dn.set_flag(flag, value)
