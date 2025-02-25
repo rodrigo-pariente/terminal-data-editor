@@ -28,21 +28,22 @@ def append_data(dn: "DataNavigator", args) -> None:
     """Append data in current path without rewriting all data to maintain."""
     new_data = smart_cast(" ".join(args))
 
-    to_compare = (new_data, dn.dn.cur_data)
-    if all(isinstance(d, dict) for d in to_compare):
-        dn.cur_data.update(new_data)
+    match (new_data, dn.cur_data):
+        case (dict(), dict()):
+            dn.cur_data.update(new_data)
 
-    elif all(isinstance(d, list) for d in to_compare):
-        dn.cur_data.extend(new_data)
+        case (list(), list()):
+            dn.cur_data.extend(new_data)
+        
+        case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
+            if isinstance(dn.cur_data, str) or isinstance(new_data, str):   
+                dn.cur_data = str(dn.cur_data)
+                new_data = str(new_data)
+            dn.cur_data = f"{dn.cur_data + new_data}"
 
-    elif all(isinstance(d, (int, float, str)) for d in to_compare):
-        if isinstance(dn.cur_data, str) or isinstance(new_data, str):   
-            dn.cur_data = str(dn.cur_data)
-            new_data = str(new_data)
-        set(dn, [f"{dn.cur_data + new_data}"])
-
-    else:
-        print(f"Could not append {new_data}.")
+        case _:
+            print(f"Could not append {new_data}.")
+    pprint(dn.cur_data)
 
 @add_command("cast")
 def cast_value(dn: "DataNavigator", args: list[str]) -> None:
@@ -52,11 +53,11 @@ def cast_value(dn: "DataNavigator", args: list[str]) -> None:
         if args[0] != ".":
             dn.path = Path(args[0])
 
-        set(dn, [smart_cast(dn.cur_data)])
+        dn.cur_data = smart_cast(dn.cur_data)
 
         dn.path = tmp
     else:
-        print("usage: cast <path>")
+        print("Usage: cast <path>")
 
 @add_command("cls", "clear")
 def clear_screen(*_) -> None:
@@ -92,7 +93,8 @@ def del_val(dn: "DataNavigator", values: list[str]) -> None:
 
         else:
             print(f"Could not delete {i}.")
-
+    pprint(dn.cur_data)
+    
 @add_command("exit", "quit")
 def exit_repl(*_) -> None:
     """Exit the script."""
@@ -119,26 +121,21 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
             p = p.joinpath(i)
 
     for i in p.parts:
-        if i == "..":
-            if dn.path.as_posix() != ".":
-                dn.path = dn.path.parent
-            else:
-                print("ERROR: You are at root level.")
-
-        elif isinstance(dn.cur_data, dict):
-            if i in dn.cur_data:
+        match dn.cur_data:
+            case _ if i == "..":
+                if dn.path.as_posix() != ".":
+                    dn.path = dn.path.parent
+                else:
+                    print("ERROR: You are at root level.")
+            
+            case dict() if i in dn.cur_data:
                 dn.path = dn.path.joinpath(i)
-            else:
-                print("ERROR: Key not found in dictionary.")
 
-        elif isinstance(dn.cur_data, list):
-            if i.isdigit() and 0 <= int(i) < len(dn.cur_data):
+            case list() if i.isdigit() and 0 <= int(i) < len(dn.cur_data):
                 dn.path = dn.path.joinpath(i)
-            else:
-                print("ERROR: Invalid list index.")
-
-        else:
-            print("ERROR: Cannot navigate into this type.")
+            
+            case _:
+                print("ERROR: Cannot navigate into this type.")
 
     pprint(dn.cur_data)
 
@@ -148,13 +145,14 @@ def list_data(dn: "DataNavigator", *_) -> None:
     pprint(dn.cur_data)
 
 @add_command("print")
-def print_public(dn: "DataNavigator", var_name: list[str]) -> None:
+def print_public(dn: "DataNavigator", var_names: list[str]) -> None:
     """Show variable value based on it's name."""
-    for var in var_name:
-        if var in dn.public:
-            print(f"{var}: {dn.public[var]}")
-        else:
-            print(f"Couldn't find variable {var}")
+    if not var_names:
+        print("Available variables: ", ", ".join(dn.public.keys()))
+        return
+
+    for var in var_names:
+        print(f"{var}: {dn.public.get(var, 'Variable not found')}")
 
 @add_command("restart")
 def restart(dn: "DataNavigator", *_) -> None:
@@ -165,8 +163,10 @@ def restart(dn: "DataNavigator", *_) -> None:
 @add_command("!")
 def run_command(_, args) -> None:
     """Let you pass shell commands without leaving the application."""
-    string_command = " ".join(args)
-    os.system(string_command)
+    if args:
+        os.system(" ".join(args))
+    else:
+        print("ERROR: No command given.")
 
 @add_command("save")
 def save(dn: "DataNavigator", *_) -> None:
@@ -175,10 +175,14 @@ def save(dn: "DataNavigator", *_) -> None:
     print(f"Saved at {dn.filename}.")
 
 @add_command("set")
-def set_value(dn: "DataNavigator", new_values: list[str], show: bool = False) -> None:
+def set_value(dn: "DataNavigator", new_value: list[str], show: bool = True) -> None:
     """Set new value in current path data."""
-    for nv in new_values:
-        nv = nv if not dn.literal else smart_cast(nv)
-        dn.data = change_data_by_path(dn.data, dn.path, nv)
+    if len(new_value) != 1:
+        print("Usage: set <new_value>.")
+        return
+
+    dn.cur_data = new_value[0]
+    
     if show:
         pprint(dn.cur_data)
+
