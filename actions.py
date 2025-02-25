@@ -43,13 +43,12 @@ def append_data(dn: "DataNavigator", args) -> None:
 
         case _:
             print(f"Could not append {new_data}.")
-    pprint(dn.cur_data)
 
 @add_command("cast")
 def cast_value(dn: "DataNavigator", args: list[str]) -> None:
     """Smart cast data in given path."""
     if len(args) == 1:
-        tmp = dn.path
+        tmp = dn.path # make change possible without forcing changing path
         if args[0] != ".":
             dn.path = Path(args[0])
 
@@ -82,7 +81,7 @@ def del_val(dn: "DataNavigator", values: list[str]) -> None:
 
     for i in values:
         if i == ".":
-            set(dn, ["None"], show=False)
+            dn.cur_data = "None" # must be improved
             cast_value(dn, ["."]) # make sure deleted value now is NoneType
 
         elif isinstance(dn.cur_data, dict):
@@ -93,7 +92,6 @@ def del_val(dn: "DataNavigator", values: list[str]) -> None:
 
         else:
             print(f"Could not delete {i}.")
-    pprint(dn.cur_data)
 
 @add_command("exit", "quit")
 def exit_repl(*_) -> None:
@@ -185,3 +183,17 @@ def set_value(dn: "DataNavigator", new_value: list[str], show: bool = True) -> N
 
     if show:
         pprint(dn.cur_data)
+
+@add_command("uncast")
+def uncast_value(dn: "DataNavigator", args: list[str]) -> None:
+    """Cast data in given path as str."""
+    if len(args) == 1:
+        tmp = dn.path
+        if args[0] != ".":
+            dn.path = Path(args[0])
+
+        dn.cur_data = str(dn.cur_data)
+
+        dn.path = tmp
+    else:
+        print("Usage: uncast <path>")

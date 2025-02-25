@@ -33,8 +33,8 @@ def main():
     )
 
     parser.add_argument(
-        "-l", "--literal", 
-        help="Cast value when writing.",
+        "-nl", "--literal_off", 
+        help="Not cast value when writing.",
         action="store_true"
     )
 
@@ -57,10 +57,10 @@ def main():
             raise SystemExit(f"File {args.filename} does not exist.")
 
     if args.new_value is None:
-        dn = DataNavigator(data, path, args.filename, args.literal)
+        dn = DataNavigator(data, path, args.filename, args.literal_off)
         dn.run()
     else:
-        if args.literal:
+        if not args.literal_off:
             new_value = smart_cast(args.new_value)
         else:
             new_value = args.new_value

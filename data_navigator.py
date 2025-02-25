@@ -7,7 +7,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Any
 from actions import commands
-from data_utils import get_data_by_path, smart_cast
+from data_utils import change_data_by_path, get_data_by_path, smart_cast
 
 class DataNavigator:
     """Terminal data navigator"""
@@ -23,14 +23,15 @@ class DataNavigator:
         self.commands: dict = commands
 
     @property
-    def cur_data(self):
+    def cur_data(self) -> Any:
         """Return current data as given working path."""
-        return get_data_by_path(self.data, self.path) 
+        return get_data_by_path(self.data, self.path)
 
     @cur_data.setter
-    def cur_data(self, value: Any):
+    def cur_data(self, value: Any) -> None:
         """Setter for easy changes in data of current working path"""
-        self.cur_data = smart_cast(value) if self.literal else value
+        value = smart_cast(value) if self.literal else value
+        self.data = change_data_by_path(self.data, self.path, value)
 
     @property
     def public(self) -> dict:

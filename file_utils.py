@@ -5,7 +5,7 @@ import json
 import os
 from typing import Any
 import yaml
-
+# make format agnostic
 
 def read_file(filename: str) -> Any:
     """Read file content if format is supported"""
@@ -49,5 +49,5 @@ def read_yaml(yaml_dir: str) -> Any:
 
 def save_yaml(yaml_dir: str, content: Any) -> None:
     """Save WHOLE content in a YAML file."""
-    with io.open(yaml_dir, "w", encoding="utf8") as file: #this is a change
+    with io.open(yaml_dir, "w", encoding="utf8") as file:
         yaml.dump(content, file, indent=4)
