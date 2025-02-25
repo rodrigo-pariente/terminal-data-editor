@@ -6,7 +6,7 @@ from pathlib import Path
 from pprint import pprint
 import sys
 from typing import TYPE_CHECKING
-from data_utils import smart_cast, change_data_by_path
+from data_utils import smart_cast
 from file_utils import read_file, save_file
 
 
@@ -34,7 +34,7 @@ def append_data(dn: "DataNavigator", args) -> None:
 
         case (list(), list()):
             dn.cur_data.extend(new_data)
-        
+
         case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
             if isinstance(dn.cur_data, str) or isinstance(new_data, str):   
                 dn.cur_data = str(dn.cur_data)
@@ -94,7 +94,7 @@ def del_val(dn: "DataNavigator", values: list[str]) -> None:
         else:
             print(f"Could not delete {i}.")
     pprint(dn.cur_data)
-    
+
 @add_command("exit", "quit")
 def exit_repl(*_) -> None:
     """Exit the script."""
@@ -127,13 +127,13 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
                     dn.path = dn.path.parent
                 else:
                     print("ERROR: You are at root level.")
-            
+
             case dict() if i in dn.cur_data:
                 dn.path = dn.path.joinpath(i)
 
             case list() if i.isdigit() and 0 <= int(i) < len(dn.cur_data):
                 dn.path = dn.path.joinpath(i)
-            
+
             case _:
                 print("ERROR: Cannot navigate into this type.")
 
@@ -182,7 +182,6 @@ def set_value(dn: "DataNavigator", new_value: list[str], show: bool = True) -> N
         return
 
     dn.cur_data = new_value[0]
-    
+
     if show:
         pprint(dn.cur_data)
-
