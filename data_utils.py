@@ -9,7 +9,7 @@ from pathlib import Path
 
 def smart_cast(value: str) -> Any:
     """Cast string to proper type."""
-    if value.lower() in {"true", "false"}:
+    if value.lower() in ("true", "false"):
         return value.lower() == "true"
     try:
         return ast.literal_eval(value)
@@ -19,7 +19,7 @@ def smart_cast(value: str) -> Any:
 def get_data_by_path(data: Any, path: Path) -> Any:
     """Get data inside a data structure based in a path."""
     posix_path = path.as_posix()
-    if posix_path == "/" or posix_path == "":
+    if posix_path in ("/", ""):
         return data
 
     indexes = [int(part) if part.isdigit() else part for part in path.parts]
@@ -29,9 +29,12 @@ def get_data_by_path(data: Any, path: Path) -> Any:
 
     return current
 
-def change_data_by_path(data: Any, path: str, new_data: Any) -> Any:
+def change_data_by_path(data: Any, path: Path, new_data: Any) -> Any:
     """Change data inside a data structure based in a path."""
+    if path.as_posix() == ".":
+        return new_data
+
     masked_data = get_data_by_path(data, path.parent)
-    masked_data[path.name] = new_data 
+    masked_data[path.name] = new_data
 
     return data
