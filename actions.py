@@ -27,19 +27,20 @@ def add_command(*commands_list: list[str]) -> Callable:
 def append_data(dn: "DataNavigator", args) -> None:
     """Append data in current path without rewriting all data to maintain."""
     new_data = smart_cast(" ".join(args))
+    cur_data = dn.get_data("current")
 
-    match (new_data, dn.cur_data):
+    match (new_data, cur_data):
         case (dict(), dict()):
-            dn.cur_data.update(new_data)
+            cur_data.update(new_data)
 
         case (list(), list()):
-            dn.cur_data.extend(new_data)
+            cur_data.extend(new_data)
 
         case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
-            if isinstance(dn.cur_data, str) or isinstance(new_data, str):
-                dn.cur_data = str(dn.cur_data)
+            if isinstance(cur_data, str) or isinstance(new_data, str):
+                cur_data = str(cur_data)
                 new_data = str(new_data)
-            dn.cur_data = f"{dn.cur_data + new_data}"
+            dn.change_data(f"{cur_data + new_data}", "current")
 
         case _:
             print(f"Could not append {new_data}.")
@@ -47,16 +48,12 @@ def append_data(dn: "DataNavigator", args) -> None:
 @add_command("cast")
 def cast_value(dn: "DataNavigator", args: list[str]) -> None:
     """Smart cast data in given path."""
-    if len(args) == 1:
-        tmp = dn.path # make change possible without forcing changing path
-        if args[0] != ".":
-            dn.path = Path(args[0])
-
-        dn.cur_data = smart_cast(dn.cur_data)
-
-        dn.path = tmp
-    else:
+    if len(args) != 1:
         print("Usage: cast <path>")
+        return
+    path = "current" if args[0] == "." else args[0]
+    data = dn.get_data(path)
+    dn.change_data(smart_cast(data), path, force_type=True)
 
 @add_command("cls", "clear")
 def clear_screen(*_) -> None:
@@ -64,12 +61,13 @@ def clear_screen(*_) -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 @add_command("del-key")
-def del_key(dn: "data_navigator", indexes: list[str]) -> None:
+def del_key(dn: "DataNavigator", indexes: list[str]) -> None:
     """Delete data based on given index."""
+    cur_data = dn.get_data("current")
     for i in indexes:
-        if isinstance(dn.cur_data, (dict, list)):
+        if isinstance(cur_data, (dict, list)):
             try:
-                dn.cur_data.pop(i)
+                cur_data.pop(i)
             except (KeyError, IndexError):
                 print("No value of index {i} in data.")
         else:
@@ -78,38 +76,28 @@ def del_key(dn: "data_navigator", indexes: list[str]) -> None:
 @add_command("del-val")
 def del_val(dn: "DataNavigator", values: list[str]) -> None:
     """Delete value, key or item based on given value."""
+    cur_data = dn.get_data("current")
     for i in values:
+        if dn.literal:
+            i = smart_cast(i)
+
         if i == ".":
-            dn.cur_data = "None" # must be improved
-            cast_value(dn, ["."]) # make sure deleted value now is NoneType
+            new_value = None
 
-        elif isinstance(dn.cur_data, dict):
-            dn.cur_data = {k: v for k, v in dn.cur_data.items() if v != i}
-
-        elif isinstance(dn.cur_data, list):
-            dn.cur_data.remove(i)
-
+        if isinstance(cur_data, dict):
+            new_value = {k: v for k, v in cur_data.items() if v != i}
+        elif isinstance(cur_data, list):
+            new_value = cur_data.remove(i)
         else:
             print(f"Could not delete {i}.")
+            continue
+
+        dn.change_data(new_value, "current", force_type=True)
 
 @add_command("exit", "quit")
 def exit_repl(*_) -> None:
     """Exit the script."""
     sys.exit(0)
-
-@add_command("flag")
-def set_flag(dn: "DataNavigator", args: list[str, str]) -> None:
-    """Set DataNavigator flag True or False."""
-    two_args = len(args) == 2
-    args_are_str = all(isinstance(arg, str) for arg in args)
-    value_is_valid = args[1] in ("on", "off")
-
-    if two_args and args_are_str and value_is_valid:
-        flag = args[0]
-        value = bool(args[1].lower() == "on")
-        dn.flag_setter(flag, value)
-    else:
-        print("usage: flag <flag> [bool value]")
 
 @add_command("cd")
 def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
@@ -121,23 +109,25 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
             return index.isdigit() and int(index) in range(len(data))
         return False
 
-    for i in indexes:
+    for i in Path(*indexes).parts: # maybe its interior be another func
         if i == "..":
             if dn.path.as_posix() != ".":
                 dn.path = dn.path.parent
             else:
                 print("ERROR: You are at root level.")
-        elif is_index(i, dn.cur_data):
+        elif i == "\\":
+            dn.path = Path(".")
+        elif is_index(i, dn.get_data("current")):
             dn.path = dn.path.joinpath(i)
         else:
             print("ERROR: Cannot navigate into this type.")
 
-    pprint(dn.cur_data)
+    pprint(dn.get_data("current"))
 
 @add_command("ls", "list")
 def list_data(dn: "DataNavigator", *_) -> None:
     """Print data in current working data path."""
-    pprint(dn.cur_data)
+    pprint(dn.get_data("current"))
 
 @add_command("print")
 def print_public(dn: "DataNavigator", var_names: list[str]) -> None:
@@ -153,7 +143,7 @@ def print_public(dn: "DataNavigator", var_names: list[str]) -> None:
 def restart(dn: "DataNavigator", *_) -> None:
     """Restart DataNavigator data to the original state."""
     dn.data = read_file(dn.filename)
-    pprint(dn.cur_data)
+    pprint(dn.get_data("current"))
 
 @add_command("!")
 def run_command(_, args) -> None:
@@ -169,28 +159,50 @@ def save(dn: "DataNavigator", *_) -> None:
     save_file(dn.filename, dn.data)
     print(f"Saved at {dn.filename}.")
 
+@add_command("flag")
+def set_flag(dn: "DataNavigator", args: list[str, str]) -> None:
+    """Set DataNavigator flag True or False."""
+    two_args = len(args) == 2
+    args_are_str = all(isinstance(arg, str) for arg in args)
+    value_is_valid = args[1].lower() in ("on", "off")
+
+    if two_args and args_are_str and value_is_valid:
+        flag = args[0]
+        value = bool(args[1].lower() == "on")
+        dn.flag_setter(flag, value)
+    else:
+        print("usage: flag <flag> [bool value]")
+
 @add_command("set")
 def set_value(dn: "DataNavigator", new_value: list[str], show: bool = True) -> None:
     """Set new value in current path data."""
-    if len(new_value) != 1:
-        print("Usage: set <new_value>.")
-        return
-
-    dn.cur_data = new_value[0]
+    dn.change_data(" ".join(new_value), "current")
 
     if show:
-        pprint(dn.cur_data)
+        pprint(dn.get_data("current"))
+
+@add_command("+l")
+def temporary_literal(dn: "DataNavigator", args: list[str]) -> None:
+    """Quick execution of command with literal on."""
+    if args:
+        func = args[0]
+        if func in commands:
+            tmp_literal = dn.literal
+            try:
+                set_flag(dn, ["literal", "on"])
+                commands[func](dn, args[1:])
+            finally:
+                dn.literal = tmp_literal
+            return
+
+    print("Usage: +l <command> [args]")
 
 @add_command("uncast")
 def uncast_value(dn: "DataNavigator", args: list[str]) -> None:
     """Cast data in given path as str."""
-    if len(args) == 1:
-        tmp = dn.path
-        if args[0] != ".":
-            dn.path = Path(args[0])
-
-        dn.cur_data = str(dn.cur_data)
-
-        dn.path = tmp
-    else:
+    if len(args) != 1:
         print("Usage: uncast <path>")
+        return
+    path = "current" if args[0] == "." else args[0]
+    data = dn.get_data(path)
+    dn.change_data(str(data), path, force_type=True)
