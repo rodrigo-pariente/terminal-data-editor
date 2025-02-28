@@ -4,6 +4,7 @@ from collections.abc import Callable
 
 error_msg = {}
 
+# file_actions.py related:
 def add_error_msg(error_name: str) -> Callable:
     """Add error associated functions to error_msg dictionary."""
     def wrapper(func: Callable) -> str:
@@ -53,3 +54,14 @@ def permission_denied() -> str:
             """
     return permission_denied_msg
 
+# file_utils.py related:
+@add_error_msg("UnsupportedFormat")
+def unsupported_format() -> str:
+    """Error for when trying to use unsupported format in file related functions"""
+    msg = "{format} format is unsupported yet. Supported formats: {supported}"
+    return msg
+
+@add_error_msg("FileNotFound")
+def file_not_found() -> str:
+    """Error for when a directory is not found or does not exists."""
+    return "ERROR: File {filename} not found."
