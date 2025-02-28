@@ -6,7 +6,7 @@ creating a REPL ambient as an object.
 from pathlib import Path
 from pprint import pprint
 from typing import Any
-from actions import commands
+from data_actions import commands
 from data_utils import change_data_by_path, get_data_by_path, smart_cast
 
 class DataNavigator:
