@@ -55,6 +55,7 @@ class FileNavigator:
         default_factory=lambda: file_commands.copy()
     )
 
+
 def compositor(
         data_navigator: DataNavigator,
         file_navigator: FileNavigator) -> None:
@@ -70,10 +71,10 @@ def compositor(
             case _ if command in active_navigator.commands:
                 active_navigator.commands[command](active_navigator, args)
             case _ if command in common_commands:
-                common_commands[command](args)
-            case "explorer":
+                common_commands[command](data_navigator, file_navigator, args)
+            case "explorer" if not args:
                 active_navigator = file_navigator
-            case "editor":
+            case "editor" if not args:
                 active_navigator = data_navigator
             case _:
                 print("ERROR: Invalid command.")
