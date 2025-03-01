@@ -5,11 +5,12 @@ import io
 import json
 import os
 from typing import Any
+import toml
 import yaml
 from messages import perror
 
 
-SUPPORTED_FORMATS: tuple[str, ...] = (".json", ".yaml")
+SUPPORTED_FORMATS: tuple[str, ...] = (".json", ".toml",".yaml")
 
 read_functions: dict = {}
 save_functions: dict = {}
@@ -34,7 +35,10 @@ def read_file(filename: str) -> Any:
     ext = os.path.splitext(filename)[1].lower()
 
     if ext not in SUPPORTED_FORMATS:
-        perror("UnsupportedFormats", format=ext, supported=SUPPORTED_FORMATS)
+        perror("UnsupportedFormats",
+                format=ext,
+                supported=str(SUPPORTED_FORMATS)
+        )
         return None
 
     try:
@@ -42,7 +46,7 @@ def read_file(filename: str) -> Any:
     except FileNotFoundError:
         perror("FileNotFound", filename=filename)
     except PermissionError:
-        perror("PermissionError") # is this really possible?
+        perror("PermissionError")
     return None
 
 def save_file(filename: str, content: Any) -> None:
@@ -59,7 +63,7 @@ def save_file(filename: str, content: Any) -> None:
 
 @add_func_to_read(".json")
 def read_json(json_dir: str) -> Any:
-    """Read JSON file, returns its content."""
+    """Read JSON file, return its content."""
     with open(json_dir, "r", encoding="utf8") as file:
         json_content = json.load(file)
     return json_content
@@ -70,9 +74,22 @@ def save_json(json_dir: str, content: Any) -> None:
     with open(json_dir, "w", encoding="utf8") as file:
         json.dump(content, file, indent=2)
 
+@add_func_to_read(".toml")
+def read_toml(toml_dir: str) -> Any:
+    """Read TOML file, return its content"""
+    with open(toml_dir, "r", encoding="utf8") as file:
+        toml_content = toml.load(file)
+    return toml_content
+
+@add_func_to_save(".toml")
+def save_toml(toml_dir: str, content: Any) -> None:
+    """Save WHOLE content in a TOML file."""
+    with io.open(toml_dir, "w", encoding="utf8") as file:
+        toml.dump(content, file)
+
 @add_func_to_read(".yaml")
 def read_yaml(yaml_dir: str) -> Any:
-    """Read YAML file, returns its content."""
+    """Read YAML file, return its content."""
     with open(yaml_dir, "r", encoding="utf8") as file:
         yaml_content = yaml.safe_load(file)
     return yaml_content
