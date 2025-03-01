@@ -1,8 +1,6 @@
 from collections.abc import Callable
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING
-import sys
 from shell_utils import copy_anything, delete_anything, move_anything, create_file, create_directory
 from messages import perror
 
@@ -28,11 +26,6 @@ def pathify(master_path: str, possible_relatives: list[str]) -> list[Path]:
     paths: tuple[Path, ...] = (Path(main / path).resolve() for path in paths)
 
     return paths
-
-@add_command("clear", "cls")
-def clear_screen(*_) -> None:
-    """Clear console screen."""
-    os.system("cls" if os.name == "nt" else "clear")
 
 @add_command("mk", "make")
 def make_files(fn: "FileNavigator", files: list[str]) -> None:
@@ -105,11 +98,6 @@ def create_directories(fn: "FileNavigator", directories: list[str]) -> None:
     for directory in directories:
         create_directory(directory)
 
-@add_command("exit", "quit", "q")
-def exit_repl(*_) -> None:
-    """Exits the application."""
-    sys.exit(0)
-
 @add_command("cd")
 def move_path(fn: "FileNavigator", args: list[str]) -> None:
     """Move from the current directory.""" 
@@ -151,10 +139,3 @@ def show_current_directory(fn: "FileNavigator", *_) -> None:
     """Shows current working directory."""
     print(f"PATH: {fn.path}")
 
-@add_command("!")
-def suddenly_shell(_, args = list[str]) -> None:
-    """Let user pass shell commands without leaving the application."""
-    if not args:
-        print("Usage: ! <shell command>")
-        return
-    os.system(" ".join(args))

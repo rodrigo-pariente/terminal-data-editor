@@ -55,11 +55,6 @@ def cast_value(dn: "DataNavigator", args: list[str]) -> None:
     data = dn.get_data(path)
     dn.change_data(smart_cast(data), path, force_type=True)
 
-@add_command("cls", "clear")
-def clear_screen(*_) -> None:
-    """Clean the screen without leaving the REPL"""
-    os.system("cls" if os.name == "nt" else "clear")
-
 @add_command("del-key")
 def del_key(dn: "DataNavigator", indexes: list[str]) -> None:
     """Delete data based on given index."""
@@ -93,11 +88,6 @@ def del_val(dn: "DataNavigator", values: list[str]) -> None:
             continue
 
         dn.change_data(new_value, "current", force_type=True)
-
-@add_command("exit", "quit")
-def exit_repl(*_) -> None:
-    """Exit the script."""
-    sys.exit(0)
 
 @add_command("cd")
 def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
@@ -144,14 +134,6 @@ def restart(dn: "DataNavigator", *_) -> None:
     """Restart DataNavigator data to the original state."""
     dn.data = read_file(dn.filename)
     pprint(dn.get_data("current"))
-
-@add_command("!")
-def run_command(_, args) -> None:
-    """Let you pass shell commands without leaving the application."""
-    if args:
-        os.system(" ".join(args))
-    else:
-        print("ERROR: No command given.")
 
 @add_command("save")
 def save(dn: "DataNavigator", *_) -> None:
@@ -206,3 +188,4 @@ def uncast_value(dn: "DataNavigator", args: list[str]) -> None:
     path = "current" if args[0] == "." else args[0]
     data = dn.get_data(path)
     dn.change_data(str(data), path, force_type=True)
+
