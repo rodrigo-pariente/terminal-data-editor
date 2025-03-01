@@ -1,7 +1,9 @@
-"""SUPER NICE MODULE DESCRIPTION"""
+"""Module for navigator repl widgets."""
+
 import dataclasses
 from pathlib import Path
 from typing import Any
+from common_actions import common_commands
 from data_actions import data_commands
 from data_utils import change_data_by_path, get_data_by_path, smart_cast
 from file_actions import file_commands
@@ -45,24 +47,6 @@ class DataNavigator:
 
         self.data = change_data_by_path(self.data, path, new_value)
 
-    def flag_setter(self, flag: str, value: bool) -> None:
-        """Set boolean public attributes."""
-        if flag in self.public and isinstance(self.public[flag], bool):
-            setattr(self, flag, value)
-        else:
-            print("Couldn't find flag.")
-
-    @property
-    def public(self) -> dict: # this also can be reduced. Reject modularity, embrace HARDCODE!
-        """Public variables that can be acessed externally."""
-        public = {
-            "data": self.data,
-            "filename": self.filename,
-            "literal": self.literal,
-            "path": self.path
-        }
-        return public
-
 @dataclasses.dataclass
 class FileNavigator:
     """Terminal file navigator"""
@@ -71,30 +55,25 @@ class FileNavigator:
         default_factory=lambda: file_commands.copy()
     )
 
-
-def run_repl(navigator: DataNavigator | FileNavigator) -> None:
-    """Run Navigator REPL ambient"""
-    while True:
-        command, *args = input(">>>").strip().split()
-
-        if command in navigator.commands:
-            navigator.commands[command](navigator, args)
-        else:
-            print("ERROR: Invalid command.")
-
 def compositor(
         data_navigator: DataNavigator,
         file_navigator: FileNavigator) -> None:
-    """Function for organizing navigator widgets"""
+    """
+    Function for organizing navigator widgets.
+    Also contain a pre-repl for higher commands.
+    """
     active_navigator = file_navigator
     while True:
         command, *args = input(">>>").strip().split()
 
-        if command in active_navigator.commands:
-            active_navigator.commands[command](active_navigator, args)
-        elif not args and command.lower() == "explorer":
-            active_navigator = file_navigator
-        elif not args and command.lower() == "editor":
-            active_navigator = data_navigator
-        else:
-            print("ERROR: Invalid command.")
+        match command.lower():
+            case _ if command in active_navigator.commands:
+                active_navigator.commands[command](active_navigator, args)
+            case _ if command in common_commands:
+                common_commands[command](args)
+            case "explorer":
+                active_navigator = file_navigator
+            case "editor":
+                active_navigator = data_navigator
+            case _:
+                print("ERROR: Invalid command.")
