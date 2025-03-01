@@ -87,7 +87,7 @@ def copy_files(fn: "FileNavigator", files: list[str]) -> None: # add filters
     for destination in destinations:
         copy_anything(source, destination)
 
-@add_command("mkdir") #
+@add_command("mkdir") 
 def create_directories(fn: "FileNavigator", directories: list[str]) -> None:
     """Create void directories in current directory. Usage mkdir <dir> ..."""
     if not directories:
@@ -101,7 +101,7 @@ def create_directories(fn: "FileNavigator", directories: list[str]) -> None:
 @add_command("cd")
 def move_path(fn: "FileNavigator", args: list[str]) -> None:
     """Move from the current directory.""" 
-    new_path = " ".join(args) 
+    new_path = " ".join(args)
 
     if new_path == "..":
         if fn.path == fn.path.anchor:
@@ -138,4 +138,3 @@ def list_files(fn: "FileNavigator", files: list[str]) -> None:
 def show_current_directory(fn: "FileNavigator", *_) -> None:
     """Shows current working directory."""
     print(f"PATH: {fn.path}")
-

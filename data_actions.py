@@ -1,11 +1,9 @@
 """Module for storing DataNavigator REPL possible actions."""
 
 from collections.abc import Callable
-import os
 from pathlib import Path
 from pprint import pprint
-import sys
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from data_utils import smart_cast
 from file_utils import read_file, save_file
 
@@ -120,19 +118,25 @@ def list_data(dn: "DataNavigator", *_) -> None:
     pprint(dn.get_data("current"))
 
 @add_command("print")
-def print_public(dn: "DataNavigator", var_names: list[str]) -> None:
+def print_attr(dn: "DataNavigator", var_names: list[str]) -> None:
     """Show variable value based on it's name."""
+    public_attr = {
+        "data": dn.data,
+        "filename": dn.filename,
+        "literal": dn.literal,
+        "path": dn.path
+    }
     if not var_names:
-        print("Available variables: ", ", ".join(dn.public.keys()))
+        print("Available variables: ", ", ".join(public_attr.keys()))
         return
 
     for var in var_names:
-        print(f"{var}: {dn.public.get(var, 'Variable not found')}")
+        print(f"{var}: {public_attr.get(var, 'Variable not found')}")
 
 @add_command("restart")
 def restart(dn: "DataNavigator", *_) -> None:
     """Restart DataNavigator data to the original state."""
-    dn.data = read_file(dn.filename)
+    dn.data: Any = read_file(dn.filename)
     pprint(dn.get_data("current"))
 
 @add_command("save")
@@ -141,19 +145,17 @@ def save(dn: "DataNavigator", *_) -> None:
     save_file(dn.filename, dn.data)
     print(f"Saved at {dn.filename}.")
 
-@add_command("flag")
-def set_flag(dn: "DataNavigator", args: list[str, str]) -> None:
+@add_command("literal")
+def set_flag(dn: "DataNavigator", args: list[str]) -> None:
     """Set DataNavigator flag True or False."""
-    two_args = len(args) == 2
-    args_are_str = all(isinstance(arg, str) for arg in args)
-    value_is_valid = args[1].lower() in ("on", "off")
+    one_arg: bool = len(args) == 1
+    arg_is_str: bool = isinstance(args[0], str)
+    value_is_valid: bool = args[0].lower() in ("on", "off")
 
-    if two_args and args_are_str and value_is_valid:
-        flag = args[0]
-        value = bool(args[1].lower() == "on")
-        dn.flag_setter(flag, value)
+    if one_arg and arg_is_str and value_is_valid:
+        dn.literal: bool = bool(args[0].lower() == "on")
     else:
-        print("usage: flag <flag> [bool value]")
+        print("usage: literal on / literal off")
 
 @add_command("set")
 def set_value(dn: "DataNavigator", new_value: list[str], show: bool = True) -> None:
@@ -188,4 +190,3 @@ def uncast_value(dn: "DataNavigator", args: list[str]) -> None:
     path = "current" if args[0] == "." else args[0]
     data = dn.get_data(path)
     dn.change_data(str(data), path, force_type=True)
-
