@@ -1,29 +1,22 @@
 from collections.abc import Callable
 import os
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 import sys
 from shell_utils import copy_anything, delete_anything, move_anything, create_file, create_directory
-from file_utils import read_file, save_file
-from messages import perror 
+from messages import perror
 
-"""
-TO-DO: ****
-1. Make file_utils use Path instead of str
-6. Change file organizations
-7. Make FileNavigator and DataNavigator integration 
-"""
 
 if TYPE_CHECKING:
-    from data_navigator import DataNavigator
+    from file_navigator import FileNavigator
 
-commands = {}
+file_commands = {}
 
 def add_command(*commands_list: tuple[str, ...]) -> Callable:
     """Decorator to add new commands automaticaly to commands dictionary."""
     def wrapper(func):
         for command in commands_list:
-            commands[command] = func
+            file_commands[command] = func
         return func
     return wrapper
 
@@ -31,9 +24,9 @@ def pathify(master_path: str, possible_relatives: list[str]) -> list[Path]:
     """Unify paths with a master path if they're relatives."""
     main: str = master_path
     paths: list[str] = possible_relatives
-    
+
     paths: tuple[Path, ...] = (Path(main / path).resolve() for path in paths)
-    
+
     return paths
 
 @add_command("clear", "cls")
@@ -47,7 +40,7 @@ def make_files(fn: "FileNavigator", files: list[str]) -> None:
     if not files:
         print("Usage: make <filename_1> ...")
         return
-    
+
     files: tuple[Path, ...] = pathify(fn.path, files) 
     for file in files:
         file_path: Path = (fn.path/file).resolve()
@@ -65,7 +58,7 @@ def delete_files(fn: "FileNavigator", files: list[str]) -> None:
         delete_anything(file)
 
 @add_command("command", "commands")
-def print_public(fn: "FileNavigator", var_names: list[str]) -> None:
+def print_commands(fn: "FileNavigator") -> None:
     """Show available commands""" 
     for command in fn.commands.keys():
         print(command) # make it prettier
@@ -94,10 +87,10 @@ def copy_files(fn: "FileNavigator", files: list[str]) -> None: # add filters
     if len(files) < 2:
         print("Usage: copy <source> <destination_1> ...")
         return
-    
+
     files: tuple[Path, ...] = [Path(fn.path / file).resolve() for file in files]
     source, *destinations = files
-    
+
     for destination in destinations:
         copy_anything(source, destination)
 
@@ -149,7 +142,7 @@ def list_files(fn: "FileNavigator", files: list[str]) -> None:
             for file in files:
                 print(file)
         elif path.is_file():
-            print(path.name) 
+            print(path.name)
         else:
             perror("DirectoryOrFileNotFound", filename=path)
 
@@ -159,10 +152,9 @@ def show_current_directory(fn: "FileNavigator", *_) -> None:
     print(f"PATH: {fn.path}")
 
 @add_command("!")
-def suddenly_shell(fn: "FileNavigator", args = list[str]) -> None:
+def suddenly_shell(_, args = list[str]) -> None:
     """Let user pass shell commands without leaving the application."""
     if not args:
         print("Usage: ! <shell command>")
         return
     os.system(" ".join(args))
-

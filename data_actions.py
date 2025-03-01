@@ -13,13 +13,13 @@ from file_utils import read_file, save_file
 if TYPE_CHECKING:
     from data_navigator import DataNavigator
 
-commands = {}
+data_commands = {}
 
 def add_command(*commands_list: list[str]) -> Callable:
     """Decorator to add new commands automaticaly to commands dictionary."""
     def wrapper(func):
         for command in commands_list:
-            commands[command] = func
+            data_commands[command] = func
         return func
     return wrapper
 
@@ -186,11 +186,11 @@ def temporary_literal(dn: "DataNavigator", args: list[str]) -> None:
     """Quick execution of command with literal on."""
     if args:
         func = args[0]
-        if func in commands:
+        if func in data_commands:
             tmp_literal = dn.literal
             try:
                 set_flag(dn, ["literal", "on"])
-                commands[func](dn, args[1:])
+                data_commands[func](dn, args[1:])
             finally:
                 dn.literal = tmp_literal
             return
@@ -206,4 +206,3 @@ def uncast_value(dn: "DataNavigator", args: list[str]) -> None:
     path = "current" if args[0] == "." else args[0]
     data = dn.get_data(path)
     dn.change_data(str(data), path, force_type=True)
-
