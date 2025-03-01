@@ -1,9 +1,9 @@
 """Module containing functions for handling data serial files."""
+
 from collections.abc import Callable
 import io
 import json
 import os
-from pathlib import Path
 from typing import Any
 import yaml
 from messages import perror
@@ -11,13 +11,13 @@ from messages import perror
 
 SUPPORTED_FORMATS: tuple[str, ...] = (".json", ".yaml")
 
-read_functions: dict = {}
-save_functions: dict = {}
+read_functions: dict[str, Callable[str, Any]] = {}
+save_functions: dict[str, Callable[str, Any]] = {}
 
 def add_func_to_dict(dictionary: dict) -> Callable:
     """
-    Super function for creating decorators that
-    inserts functions into dicts.
+    Helper function to create decorators that 
+    register functions into dictionaries
     """
     def add_func(*values) -> Callable:
         def wrapper(func) -> None:
@@ -32,18 +32,18 @@ add_func_to_save: Callable = add_func_to_dict(save_functions)
 def read_file(filename: str) -> Any:
     """Read file content if formart is supported."""
     ext = os.path.splitext(filename)[1].lower()
-    filepath = Path(filename)
 
     if ext not in SUPPORTED_FORMATS:
         perror("UnsupportedFormats", format=ext, supported=SUPPORTED_FORMATS)
         return None
 
-    if not filepath.is_file():
+    try:
+        return read_functions[ext](filename)
+    except FileNotFoundError:
         perror("FileNotFound", filename=filename)
-        return None
-
-    content = read_functions[ext](filename)
-    return content
+    except PermissionError:
+        perror("PermissionError") # is this really possible?
+    return None
 
 def save_file(filename: str, content: Any) -> None:
     """Save file if format is supported"""
@@ -52,7 +52,10 @@ def save_file(filename: str, content: Any) -> None:
     if ext not in SUPPORTED_FORMATS:
         perror("UnsupportedFormats", format=ext, supported=SUPPORTED_FORMATS)
         return
-    save_functions[ext](filename, content)
+    try:
+        save_functions[ext](filename, content)
+    except PermissionError:
+        perror("PermissionError")
 
 @add_func_to_read(".json")
 def read_json(json_dir: str) -> Any:
