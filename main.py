@@ -3,7 +3,8 @@
 import argparse
 from pathlib import Path
 import os
-from data_navigator import DataNavigator
+from navigator import DataNavigator, FileNavigator, compositor
+from file_actions import file_commands
 from file_utils import read_file, save_file
 from data_utils import change_data_by_path, smart_cast
 
@@ -57,8 +58,9 @@ def main():
             raise SystemExit(f"File {args.filename} does not exist.")
 
     if args.new_value is None:
-        dn = DataNavigator(data, path, args.filename, args.literal_off)
-        dn.run()
+        dn = DataNavigator(data, args.filename, path, (not args.literal_off))
+        fn = FileNavigator()
+        compositor(dn, fn)
     else:
         if not args.literal_off:
             new_value = smart_cast(args.new_value)
