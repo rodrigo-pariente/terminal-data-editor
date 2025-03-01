@@ -1,3 +1,5 @@
+.venv/
+venv/
 data_files/
 __pycache__/
 tests/
