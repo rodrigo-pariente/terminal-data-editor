@@ -11,8 +11,8 @@ from messages import perror
 
 SUPPORTED_FORMATS: tuple[str, ...] = (".json", ".yaml")
 
-read_functions: dict[str, Callable[str, Any]] = {}
-save_functions: dict[str, Callable[str, Any]] = {}
+read_functions: dict = {}
+save_functions: dict = {}
 
 def add_func_to_dict(dictionary: dict) -> Callable:
     """
