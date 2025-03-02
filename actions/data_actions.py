@@ -9,7 +9,7 @@ from read_and_write import read_file, write_file
 
 
 if TYPE_CHECKING:
-    from widgets.navigators import DataNavigator
+    from widgets.data_navigator import DataNavigator
 
 data_commands = {}
 
@@ -136,14 +136,20 @@ def print_attr(dn: "DataNavigator", var_names: list[str]) -> None:
 @add_command("restart")
 def restart(dn: "DataNavigator", *_) -> None:
     """Restart DataNavigator data to the original state."""
-    dn.data: Any = read_file(dn.filename)
+    if dn.filename is not None:
+        dn.data: Any = read_file(dn.filename)
+    else:
+        print("ERROR: No file is opened.")
     pprint(dn.get_data("current"))
 
 @add_command("save")
 def save(dn: "DataNavigator", *_) -> None:
     """Save DataNavigator modified data into filename."""
-    write_file(dn.filename, dn.data)
-    print(f"Saved at {dn.filename}.")
+    if dn.filename is not None:
+        write_file(dn.filename, dn.data)
+        print(f"Saved at {dn.filename}.")
+    else:
+        print("ERROR: No file is opened.")
 
 @add_command("literal")
 def set_flag(dn: "DataNavigator", args: list[str]) -> None:

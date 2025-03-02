@@ -9,7 +9,7 @@ from utils.shell_utils import (
 )
 
 if TYPE_CHECKING:
-    from widgets.navigators import FileNavigator
+    from widgets.file_navigator import FileNavigator
 
 file_commands = {}
 

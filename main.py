@@ -3,7 +3,9 @@
 import argparse
 from pathlib import Path
 import os
-from widgets.navigators import DataNavigator, FileNavigator, NavigatorManager
+from widgets.data_navigator import DataNavigator
+from widgets.file_navigator import FileNavigator
+from widgets.navigator_manager import NavigatorManager
 from read_and_write import read_file, write_file
 from utils.data_utils import change_data_by_path, smart_cast
 
@@ -13,9 +15,11 @@ def main():
     parser = argparse.ArgumentParser(prog="JSON Command Line Editor")
 
     parser.add_argument(
-        "filename",
+        "-f",
+        "--filename",
         help="JSON file directory's.",
-        type=str
+        type=str,
+        default=None
     )
 
     parser.add_argument(
@@ -28,7 +32,7 @@ def main():
     parser.add_argument(
         "-p", "--path",
         help="Path of value to be changed.",
-        default="", 
+        default="",
         type=str
     )
 
@@ -47,14 +51,17 @@ def main():
     args = parser.parse_args()
     path = Path(args.path)
 
-    if os.path.isfile(args.filename):
-        data = read_file(args.filename)
-    else:
-        if args.make:
-            data = ""
-            write_file(args.filename, data)
+    if args.filename is not None:
+        if os.path.isfile(args.filename):
+            data = read_file(args.filename)
         else:
-            raise SystemExit(f"File {args.filename} does not exist.")
+            if args.make:
+                data = ""
+                write_file(args.filename, data)
+            else:
+                raise SystemExit(f"File {args.filename} does not exist.")
+    else:
+        data = None
 
     if args.new_value is None:
         dn: DataNavigator = DataNavigator(data, args.filename, path, (not args.literal_off))

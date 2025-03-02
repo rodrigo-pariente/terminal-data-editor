@@ -9,7 +9,7 @@ from read_and_write import read_file
 
 
 if TYPE_CHECKING:
-    from widgets.navigators import NavigatorManager
+    from widgets.navigator_manager import NavigatorManager
 
 common_commands: dict[str, Callable] = {}
 
