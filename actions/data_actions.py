@@ -4,12 +4,12 @@ from collections.abc import Callable
 from pathlib import Path
 from pprint import pprint
 from typing import Any, TYPE_CHECKING
-from data_utils import smart_cast
-from read_and_write import read_file, save_file
+from utils.data_utils import smart_cast
+from read_and_write import read_file, write_file
 
 
 if TYPE_CHECKING:
-    from navigators import DataNavigator
+    from widgets.navigators import DataNavigator
 
 data_commands = {}
 
@@ -142,7 +142,7 @@ def restart(dn: "DataNavigator", *_) -> None:
 @add_command("save")
 def save(dn: "DataNavigator", *_) -> None:
     """Save DataNavigator modified data into filename."""
-    save_file(dn.filename, dn.data)
+    write_file(dn.filename, dn.data)
     print(f"Saved at {dn.filename}.")
 
 @add_command("literal")

@@ -3,12 +3,13 @@
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
-from shell_utils import copy_anything, delete_anything, move_anything, create_file, create_directory
 from messages import perror
-
+from utils.shell_utils import (
+        copy_anything, delete_anything, move_anything, create_file, create_directory
+)
 
 if TYPE_CHECKING:
-    from navigators import FileNavigator
+    from widgets.navigators import FileNavigator
 
 file_commands = {}
 

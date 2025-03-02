@@ -23,10 +23,7 @@ def copy_anything(source: Path, destination: Path) -> None:
         perror("DirectoryOrFileNotFound", filename=source.name)
 
 def create_directory(directory: Path) -> None:
-    """
-    Create directory. Returns True if by the end of process, directory 
-    exists, if does not, returns False.
-    """
+    """Create directory in given path."""
     try:
         directory.mkdir(parents=True)
     except FileExistsError:
@@ -69,9 +66,7 @@ def delete_anything(file: Path) -> None:
         perror("PermissionError")
 
 def move_anything(source: Path, destination: Path) -> Path:
-    """
-    Move anything, file or directory from source into given destination.
-    """
+    """Move anything, file or directory from source into given destination."""
     if destination.is_dir():
         new_path: Path = (destination / source.name).resolve()
     else:

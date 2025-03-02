@@ -3,9 +3,9 @@
 import argparse
 from pathlib import Path
 import os
-from navigators import DataNavigator, FileNavigator, NavigatorManager
-from read_and_write import read_file, save_file
-from data_utils import change_data_by_path, smart_cast
+from widgets.navigators import DataNavigator, FileNavigator, NavigatorManager
+from read_and_write import read_file, write_file
+from utils.data_utils import change_data_by_path, smart_cast
 
 
 def main():
@@ -52,7 +52,7 @@ def main():
     else:
         if args.make:
             data = ""
-            save_file(args.filename, data)
+            write_file(args.filename, data)
         else:
             raise SystemExit(f"File {args.filename} does not exist.")
 
@@ -67,7 +67,7 @@ def main():
         else:
             new_value = args.new_value
         new_content = change_data_by_path(data, path, new_value)
-        save_file(args.filename, new_content)
+        write_file(args.filename, new_content)
 
 
 if __name__ == "__main__":

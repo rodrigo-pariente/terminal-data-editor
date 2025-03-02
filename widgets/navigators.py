@@ -3,10 +3,10 @@
 import dataclasses
 from pathlib import Path
 from typing import Any
-from common_actions import common_commands
-from data_actions import data_commands
-from data_utils import change_data_by_path, get_data_by_path, smart_cast
-from file_actions import file_commands
+from actions.common_actions import common_commands
+from actions.data_actions import data_commands
+from actions.file_actions import file_commands
+from utils.data_utils import change_data_by_path, get_data_by_path, smart_cast
 
 
 class DataNavigator:
@@ -54,7 +54,7 @@ class FileNavigator:
 
 class NavigatorManager:
     """Object for organizing and integrating navigator widgets."""
-    def __init__(self, 
+    def __init__(self,
                 data_navigator: DataNavigator,
                 file_navigator: FileNavigator) -> None:
         self.data_navigator = data_navigator
