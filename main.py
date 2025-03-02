@@ -3,8 +3,8 @@
 import argparse
 from pathlib import Path
 import os
-from navigators import DataNavigator, FileNavigator, compositor
-from file_utils import read_file, save_file
+from navigators import DataNavigator, FileNavigator, navigator_manager
+from read_and_write import read_file, save_file
 from data_utils import change_data_by_path, smart_cast
 
 
@@ -59,7 +59,7 @@ def main():
     if args.new_value is None:
         dn = DataNavigator(data, args.filename, path, (not args.literal_off))
         fn = FileNavigator()
-        compositor(dn, fn)
+        navigator_manager(dn, fn)
     else:
         if not args.literal_off:
             new_value = smart_cast(args.new_value)

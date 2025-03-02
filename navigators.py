@@ -32,10 +32,7 @@ class DataNavigator:
                     new_value: Any,
                     path: Path | str = "current",
                     force_type: bool = False) -> None:
-        """
-        Change DataNavigator data based on a path, current if none is given.
-        Can force value to be or not casted.
-        """
+        """Change data using a path. Allows skip new value handling."""
         if isinstance(path, str) and path.lower() == "current":
             path = self.path
 
@@ -49,20 +46,17 @@ class DataNavigator:
 
 @dataclasses.dataclass
 class FileNavigator:
-    """Terminal file navigator"""
+    """Terminal file navigator for exploring files."""
     path: Path = Path(Path.cwd().anchor)
     commands: dict = dataclasses.field(
         default_factory=lambda: file_commands.copy()
     )
 
 
-def compositor(
+def navigator_manager(
         data_navigator: DataNavigator,
         file_navigator: FileNavigator) -> None:
-    """
-    Function for organizing navigator widgets.
-    Also contain a pre-repl for higher commands.
-    """
+    """Function for organizing and integrating navigator widgets."""
     active_navigator = file_navigator
     while True:
         command, *args = input(">>>").strip().split()
