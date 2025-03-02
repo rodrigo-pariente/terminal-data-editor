@@ -12,8 +12,13 @@ class NavigatorManager:
                 file_navigator: FileNavigator) -> None:
         self.data_navigator = data_navigator
         self.file_navigator = file_navigator
-        self.active_navigator = self.data_navigator
         self.commands = common_commands
+
+        self.active_navigator: DataNavigator | FileNavigator
+        if self.data_navigator.filename is None:
+            self.active_navigator = self.file_navigator
+        else:
+            self.active_navigator = self.data_navigator
 
     def run(self) -> None:
         """Execute the REPL ambient"""
