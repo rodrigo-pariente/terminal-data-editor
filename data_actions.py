@@ -15,10 +15,9 @@ data_commands = {}
 
 def add_command(*commands_list: list[str]) -> Callable:
     """Decorator to add new commands automaticaly to commands dictionary."""
-    def wrapper(func):
+    def wrapper(action: Callable) -> None:
         for command in commands_list:
-            data_commands[command] = func
-        return func
+            data_commands[command]: Callable = action
     return wrapper
 
 @add_command("append")
@@ -36,8 +35,8 @@ def append_data(dn: "DataNavigator", args) -> None:
 
         case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
             if isinstance(cur_data, str) or isinstance(new_data, str):
-                cur_data = str(cur_data)
-                new_data = str(new_data)
+                cur_data: str = str(cur_data)
+                new_data: str = str(new_data)
             dn.change_data(f"{cur_data + new_data}", "current")
 
         case _:
@@ -49,14 +48,14 @@ def cast_value(dn: "DataNavigator", args: list[str]) -> None:
     if len(args) != 1:
         print("Usage: cast <path>")
         return
-    path = "current" if args[0] == "." else args[0]
-    data = dn.get_data(path)
+    path: str = "current" if args[0] == "." else args[0]
+    data: Any = dn.get_data(path)
     dn.change_data(smart_cast(data), path, force_type=True)
 
 @add_command("del-key")
 def del_key(dn: "DataNavigator", indexes: list[str]) -> None:
     """Delete data based on given index."""
-    cur_data = dn.get_data("current")
+    cur_data: Any = dn.get_data("current")
     for i in indexes:
         if isinstance(cur_data, (dict, list)):
             try:
@@ -69,18 +68,19 @@ def del_key(dn: "DataNavigator", indexes: list[str]) -> None:
 @add_command("del-val")
 def del_val(dn: "DataNavigator", values: list[str]) -> None:
     """Delete value, key or item based on given value."""
-    cur_data = dn.get_data("current")
+    cur_data: Any = dn.get_data("current")
     for i in values:
         if dn.literal:
-            i = smart_cast(i)
+            i: Any = smart_cast(i)
 
         if i == ".":
-            new_value = None
+            new_value: None = None
 
         if isinstance(cur_data, dict):
-            new_value = {k: v for k, v in cur_data.items() if v != i}
+            new_value: dict[str, Any] = {}
+            new_value |= {k: v for k, v in cur_data.items() if v != i}
         elif isinstance(cur_data, list):
-            new_value = cur_data.remove(i)
+            new_value: list[Any] = cur_data.remove(i)
         else:
             print(f"Could not delete {i}.")
             continue
@@ -120,7 +120,7 @@ def list_data(dn: "DataNavigator", *_) -> None:
 @add_command("print")
 def print_attr(dn: "DataNavigator", var_names: list[str]) -> None:
     """Show variable value based on it's name."""
-    public_attr = {
+    public_attr: dict[str, Any] = {
         "data": dn.data,
         "filename": dn.filename,
         "literal": dn.literal,
@@ -169,9 +169,9 @@ def set_value(dn: "DataNavigator", new_value: list[str], show: bool = True) -> N
 def temporary_literal(dn: "DataNavigator", args: list[str]) -> None:
     """Quick execution of command with literal on."""
     if args:
-        func = args[0]
+        func: str = args[0]
         if func in data_commands:
-            tmp_literal = dn.literal
+            tmp_literal: bool = dn.literal
             try:
                 set_flag(dn, ["literal", "on"])
                 data_commands[func](dn, args[1:])
@@ -187,6 +187,6 @@ def uncast_value(dn: "DataNavigator", args: list[str]) -> None:
     if len(args) != 1:
         print("Usage: uncast <path>")
         return
-    path = "current" if args[0] == "." else args[0]
-    data = dn.get_data(path)
+    path: str = "current" if args[0] == "." else args[0]
+    data: Any = dn.get_data(path)
     dn.change_data(str(data), path, force_type=True)

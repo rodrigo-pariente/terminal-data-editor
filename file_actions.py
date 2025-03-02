@@ -14,10 +14,9 @@ file_commands = {}
 
 def add_command(*commands_list: tuple[str, ...]) -> Callable:
     """Decorator to add new commands automaticaly to commands dictionary."""
-    def wrapper(func):
+    def wrapper(action: Callable) -> None:
         for command in commands_list:
-            file_commands[command] = func
-        return func
+            file_commands[command]: Callable = action
     return wrapper
 
 def pathify(main_path: Path, possible_relatives: list[str]) -> tuple[Path, ...]:
@@ -63,7 +62,7 @@ def delete_files(fn: "FileNavigator", paths: list[str]) -> None:
 def list_files(fn: "FileNavigator", targets: list[str]) -> None:
     """List directory files."""
     if not targets:
-        targets = ["."]
+        targets: list[str] = ["."]
 
     files: list[str] = [t if t != "." else f"{fn.path}"for t in targets]
 
@@ -101,7 +100,7 @@ def move_file(fn: "FileNavigator", paths: list[str]) -> None:
     files: tuple[Path, ...] = pathify(fn.path, paths)
     source, *destinations = files
 
-    new_path = move_anything(source, destinations[0])
+    new_path: Path = move_anything(source, destinations[0])
 
     if len(destinations) > 1:
         for destination in destinations[1:]:
@@ -110,7 +109,7 @@ def move_file(fn: "FileNavigator", paths: list[str]) -> None:
 @add_command("cd")
 def change_dir(fn: "FileNavigator", args: list[str]) -> None:
     """Move from the current directory.""" 
-    new_path = " ".join(args)
+    new_path: str = " ".join(args)
 
     if new_path == "..":
         fn.path = fn.path.parent
