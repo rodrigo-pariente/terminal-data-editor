@@ -18,8 +18,7 @@ def smart_cast(value: str) -> Any:
 
 def get_data_by_path(data: Any, path: Path) -> Any:
     """Get data inside a data structure based in a path."""
-    posix_path = path.as_posix()
-    if posix_path in ("/", ""):
+    if path.as_posix() in ("/", ""):
         return data
 
     indexes = [int(part) if part.isdigit() else part for part in path.parts]
