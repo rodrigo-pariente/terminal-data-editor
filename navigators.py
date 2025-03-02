@@ -52,23 +52,28 @@ class FileNavigator:
         default_factory=lambda: file_commands.copy()
     )
 
+class NavigatorManager:
+    """Object for organizing and integrating navigator widgets."""
+    def __init__(self, 
+                data_navigator: DataNavigator,
+                file_navigator: FileNavigator) -> None:
+        self.data_navigator = data_navigator
+        self.file_navigator = file_navigator
+        self.active_navigator = self.file_navigator
 
-def navigator_manager(
-        data_navigator: DataNavigator,
-        file_navigator: FileNavigator) -> None:
-    """Function for organizing and integrating navigator widgets."""
-    active_navigator = file_navigator
-    while True:
-        command, *args = input(">>>").strip().split()
+    def run(self) -> None:
+        """Execute the REPL ambient"""
+        while True:
+            command, *args = input(">>>").strip().split()
 
-        match command.lower():
-            case _ if command in active_navigator.commands:
-                active_navigator.commands[command](active_navigator, args)
-            case _ if command in common_commands:
-                common_commands[command](data_navigator, file_navigator, args)
-            case "explorer" if not args:
-                active_navigator = file_navigator
-            case "editor" if not args:
-                active_navigator = data_navigator
-            case _:
-                print("ERROR: Invalid command.")
+            match command.lower():
+                case _ if command in self.active_navigator.commands:
+                    self.active_navigator.commands[command](self.active_navigator, args)
+                case _ if command in common_commands:
+                    common_commands[command](self, args)
+                case "explorer" if not args:
+                    self.active_navigator = self.file_navigator
+                case "editor" if not args:
+                    self.active_navigator = self.data_navigator
+                case _:
+                    print("ERROR: Invalid command.")

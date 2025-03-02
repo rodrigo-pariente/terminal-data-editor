@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 import os
-from navigators import DataNavigator, FileNavigator, navigator_manager
+from navigators import DataNavigator, FileNavigator, NavigatorManager
 from read_and_write import read_file, save_file
 from data_utils import change_data_by_path, smart_cast
 
@@ -57,9 +57,10 @@ def main():
             raise SystemExit(f"File {args.filename} does not exist.")
 
     if args.new_value is None:
-        dn = DataNavigator(data, args.filename, path, (not args.literal_off))
-        fn = FileNavigator()
-        navigator_manager(dn, fn)
+        dn: DataNavigator = DataNavigator(data, args.filename, path, (not args.literal_off))
+        fn: FileNavigator = FileNavigator()
+        nm: NavigatorManager = NavigatorManager(dn, fn)
+        nm.run()
     else:
         if not args.literal_off:
             new_value = smart_cast(args.new_value)
