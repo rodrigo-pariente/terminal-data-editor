@@ -21,10 +21,16 @@ def get_data_by_path(data: Any, path: Path) -> Any:
     if path.as_posix() in ("/", ""):
         return data
 
-    indexes = [int(part) if part.isdigit() else part for part in path.parts]
-    current = data
+    indexes: list[str | int] = []
+    for part in path.parts:
+        if part.isdigit():
+            indexes.append(int(part))
+        else:
+            indexes.append(part)
+
+    current: Any = data
     for i in indexes:
-        current = current[i]
+        current: Any = current[i]
 
     return current
 
@@ -33,7 +39,7 @@ def change_data_by_path(data: Any, path: Path, new_data: Any) -> Any:
     if path.as_posix() == ".":
         return new_data
 
-    masked_data = get_data_by_path(data, path.parent)
-    masked_data[path.name] = new_data
+    masked_data: Any = get_data_by_path(data, path.parent)
+    masked_data[path.name]: Any = new_data
 
     return data
