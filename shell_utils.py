@@ -1,25 +1,19 @@
-"""
-Module for some high-level Shell Utilities used in this project.
-It's intended to have really secure and reliable shell related functions.
-"""
+"""Module for some high-level Shell Utilities used in this project."""
+
 from pathlib import Path
 import shutil
 import os
 from messages import perror
 
 
-def copy_anything(source: Path, destination: Path) -> bool:
-    """
-    Copy anything, file or folder into given directory.
-    Returns True if file was sucessfully copied, if did not,
-    returns False.
-    """
+def copy_anything(source: Path, destination: Path) -> None:
+    """Copy anything, file or folder into given directory."""
     if not Path(destination.parent).is_dir():
         perror("DestinationMustBeDirectory", dirname=str(destination))
-        check = create_directories_interface(destination)
-        if not destination.is_dir() and check is not None:
+        create_directories_interface(destination)
+        if not destination.is_dir():
             print("Could not copy.")
-            return False
+            return
 
     if source.is_dir():
         shutil.copytree(source, destination, dirs_exist_ok=True)
@@ -27,88 +21,71 @@ def copy_anything(source: Path, destination: Path) -> bool:
         shutil.copy2(source, destination)
     else:
         perror("DirectoryOrFileNotFound", filename=source.name)
-        return False
-    return True
 
-def create_directory(directory: Path) -> bool:
+def create_directory(directory: Path) -> None:
     """
     Create directory. Returns True if by the end of process, directory 
     exists, if does not, returns False.
     """
-    if directory.is_dir():
-        perror("DirectoryAlreadyExists", dirname=str(directory))
-        return True
-
     try:
-        directory.mkdir(parents=True, exist_ok=True)
-        return True
+        directory.mkdir(parents=True)
+    except FileExistsError:
+        perror("DirectoryAlreadyExists", dirname=str(directory))
     except PermissionError:
-        perror("PermissionError")    
-        return False
+        perror("PermissionError")
 
-def create_directories_interface(directory: Path | list[Path]) -> bool | None:
+def create_directories_interface(directory: Path | list[Path]) -> None:
     """
-    User interface for creating a directory when needed for concluding other.
+    User interface for creating a directory when
+    needed for concluding other action.
     """
     print("Want to make directory? [y]es, [n]o")
     user_input: str = input(">>>")
 
     if user_input and user_input.lower()[0] == "y":
-        create_dir_value = create_directory(directory)
-        return create_dir_value
-    return None 
+        create_directory(directory)
 
-def create_file(file: Path) -> bool:
-    """
-    Create file. Returns True if by the end of process, file exists,
-    if not, returns False.
-    """
-    if file.is_file():
-        perror("FileAlreadyExists", filename=file.name) 
-        return True
-
+def create_file(file: Path) -> None:
+    """Create blank file."""
     try:
-        file.touch()
-        return True
+        file.touch(exist_ok=False)
+    except FileExistsError:
+        perror("FileAlreadyExists", filename=file.name)
     except FileNotFoundError:
         perror("DirectoryNotFound", dirname=file.parent)
     except PermissionError:
         perror("PermissionError")
-    return False
 
-def delete_anything(file: Path) -> bool:
+def delete_anything(file: Path) -> None:
     """Delete anything, file or folder that is passed."""
     try:
         if file.is_dir():
             shutil.rmtree(file)
-            return True
-        if file.is_file():
+        else:
             os.remove(file)
-            return True
-
+    except FileNotFoundError:
         perror("DirectoryOrFileNotFound", filename=str(file))
     except PermissionError:
         perror("PermissionError")
-    return False
 
-def move_anything(source: Path, destination: Path) -> bool:
+def move_anything(source: Path, destination: Path) -> Path:
     """
     Move anything, file or directory from source into given destination.
-    Returns True if process succeded, if did not, returns False.
     """
     if destination.is_dir():
-        new_path = (destination / source.name).resolve()
+        new_path: Path = (destination / source.name).resolve()
     else:
-        new_path = destination
+        new_path: Path = destination
 
     try:
         source.rename(new_path)
-        return True
     except FileNotFoundError:
         perror("DirectoryNotFound", dirname=destination)
-        check = create_directories_interface(destination)
-        if check is not None:
+        create_directories_interface(destination)
+        if Path(new_path.parent).is_dir():
             move_anything(source, destination)
+        else:
+            print("Couldn't move.")
     except PermissionError:
         perror("PermissionError")
-    return False
+    return new_path
