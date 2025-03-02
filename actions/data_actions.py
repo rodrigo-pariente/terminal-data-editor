@@ -11,7 +11,7 @@ from read_and_write import read_file, write_file
 if TYPE_CHECKING:
     from widgets.data_navigator import DataNavigator
 
-data_commands = {}
+data_commands: dict[str, Callable]  = {}
 
 def add_command(*commands_list: list[str]) -> Callable:
     """Decorator to add new commands automaticaly to commands dictionary."""

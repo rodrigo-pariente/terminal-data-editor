@@ -11,7 +11,7 @@ from utils.shell_utils import (
 if TYPE_CHECKING:
     from widgets.file_navigator import FileNavigator
 
-file_commands = {}
+file_commands: dict[str, Callable]  = {}
 
 def add_command(*commands_list: tuple[str, ...]) -> Callable:
     """Decorator to add new commands automaticaly to commands dictionary."""
