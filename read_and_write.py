@@ -12,8 +12,8 @@ from messages import perror
 
 SUPPORTED_FORMATS: tuple[str, ...] = (".json", ".toml",".yaml")
 
-read_functions: dict = {}
-save_functions: dict = {}
+read_functions: dict[str, Callable] = {}
+write_functions: dict[str, Callable] = {}
 
 def add_func_to_dict(dictionary: dict) -> Callable:
     """
@@ -28,7 +28,7 @@ def add_func_to_dict(dictionary: dict) -> Callable:
     return add_func
 
 add_func_to_read: Callable = add_func_to_dict(read_functions)
-add_func_to_save: Callable = add_func_to_dict(save_functions)
+add_func_to_write: Callable = add_func_to_dict(write_functions)
 
 def read_file(filename: str) -> Any:
     """Read file content if formart is supported."""
@@ -49,15 +49,16 @@ def read_file(filename: str) -> Any:
         perror("PermissionError")
     return None
 
-def save_file(filename: str, content: Any) -> None:
-    """Save file if format is supported"""
+def write_file(filename: str, content: Any) -> None:
+    """write file if format is supported"""
     ext = os.path.splitext(filename)[1].lower()
 
     if ext not in SUPPORTED_FORMATS:
         perror("UnsupportedFormats", format=ext, supported=SUPPORTED_FORMATS)
         return
+
     try:
-        save_functions[ext](filename, content)
+        write_functions[ext](filename, content)
     except PermissionError:
         perror("PermissionError")
 
@@ -68,8 +69,8 @@ def read_json(json_dir: str) -> Any:
         json_content = json.load(file)
     return json_content
 
-@add_func_to_save(".json")
-def save_json(json_dir: str, content: Any) -> None:
+@add_func_to_write(".json")
+def write_json(json_dir: str, content: Any) -> None:
     """Save WHOLE content in a JSON file."""
     with open(json_dir, "w", encoding="utf8") as file:
         json.dump(content, file, indent=2)
@@ -81,8 +82,8 @@ def read_toml(toml_dir: str) -> Any:
         toml_content = toml.load(file)
     return toml_content
 
-@add_func_to_save(".toml")
-def save_toml(toml_dir: str, content: Any) -> None:
+@add_func_to_write(".toml")
+def write_toml(toml_dir: str, content: Any) -> None:
     """Save WHOLE content in a TOML file."""
     with io.open(toml_dir, "w", encoding="utf8") as file:
         toml.dump(content, file)
@@ -94,8 +95,8 @@ def read_yaml(yaml_dir: str) -> Any:
         yaml_content = yaml.safe_load(file)
     return yaml_content
 
-@add_func_to_save(".yaml")
-def save_yaml(yaml_dir: str, content: Any) -> None:
+@add_func_to_write(".yaml")
+def write_yaml(yaml_dir: str, content: Any) -> None:
     """Save WHOLE content in a YAML file."""
     with io.open(yaml_dir, "w", encoding="utf8") as file:
         yaml.dump(content, file, indent=4)
