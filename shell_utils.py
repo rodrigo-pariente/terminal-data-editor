@@ -8,7 +8,7 @@ from messages import perror
 
 def copy_anything(source: Path, destination: Path) -> None:
     """Copy anything, file or folder into given directory."""
-    if not Path(destination.parent).is_dir():
+    if not destination.parent.is_dir():
         perror("DestinationMustBeDirectory", dirname=str(destination))
         create_directories_interface(destination)
         if not destination.is_dir():
@@ -82,7 +82,7 @@ def move_anything(source: Path, destination: Path) -> Path:
     except FileNotFoundError:
         perror("DirectoryNotFound", dirname=destination)
         create_directories_interface(destination)
-        if Path(new_path.parent).is_dir():
+        if new_path.parent.is_dir():
             move_anything(source, destination)
         else:
             print("Couldn't move.")
