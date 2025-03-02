@@ -1,4 +1,7 @@
-"""Module containing functions for handling data serial files."""
+"""
+Module containing functions for reading and writing different file formats.
+Add more formats support here.
+"""
 
 from collections.abc import Callable
 import io
