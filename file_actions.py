@@ -8,7 +8,7 @@ from messages import perror
 
 
 if TYPE_CHECKING:
-    from file_navigator import FileNavigator
+    from navigators import FileNavigator
 
 file_commands = {}
 

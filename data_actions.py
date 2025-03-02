@@ -9,7 +9,7 @@ from read_and_write import read_file, save_file
 
 
 if TYPE_CHECKING:
-    from data_navigator import DataNavigator
+    from navigators import DataNavigator
 
 data_commands = {}
 
