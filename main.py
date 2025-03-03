@@ -66,7 +66,7 @@ def main():
     if args.new_value is None:
         dn: DataNavigator = DataNavigator(data, args.filename, path, (not args.literal_off))
         fn: FileNavigator = FileNavigator()
-        nm: NavigatorManager = NavigatorManager(dn, fn)
+        nm: NavigatorManager = NavigatorManager([dn], fn)
         nm.run()
     else:
         if not args.literal_off:
