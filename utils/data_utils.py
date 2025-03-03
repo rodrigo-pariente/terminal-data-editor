@@ -7,6 +7,7 @@ import ast
 from typing import Any
 from pathlib import Path
 
+
 def smart_cast(value: str) -> Any:
     """Cast string to proper type."""
     if value.lower() in ("true", "false"):

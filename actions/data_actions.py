@@ -20,6 +20,33 @@ def add_command(*commands_list: list[str]) -> Callable:
             data_commands[command]: Callable = action
     return wrapper
 
+@add_command("qf", "quick-fill")
+def quick_fill(dn: "DataNavigator", *_) -> None:
+    """Editing mode for quick filling dict values and list items."""
+    def qf(data: Any) -> Any:
+        if isinstance(data, list):
+            for i, item in enumerate(data):
+                if isinstance(item, (dict, list)):
+                    qf(item)
+                else:
+                    print(f"i: {i}, item: {item}")
+                    data[i] = smart_cast(input("item: "))
+
+        elif isinstance(data, dict):
+            for key, value in data.items():
+                if isinstance(value, (dict, list)):
+                    qf(value)
+                else:
+                    print(f"{key}: {value}")
+                    data[key] = smart_cast(input(f"{key}: "))
+
+        else:
+            print(f"data: {data}")
+            data = smart_cast(input("new value: "))
+
+        return data
+    qf(dn.data)
+
 @add_command("append")
 def append_data(dn: "DataNavigator", args) -> None:
     """Append data in current path without rewriting all data to maintain."""
