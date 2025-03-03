@@ -151,11 +151,10 @@ def restart(dn: "DataNavigator", *_) -> None:
 @add_command("save")
 def save(dn: "DataNavigator", *_) -> None:
     """Save DataNavigator modified data into filename."""
-    if dn.filename is not None:
-        write_file(dn.filename, dn.data)
-        print(f"Saved at {dn.filename}.")
-    else:
-        print("ERROR: No file is opened.")
+    if dn.filename is None:
+        dn.filename: Path = Path(input("filename: "))
+    write_file(dn.filename, dn.data)
+    print(f"Saved at {dn.filename}.")
 
 @add_command("literal")
 def set_flag(dn: "DataNavigator", args: list[str]) -> None:
