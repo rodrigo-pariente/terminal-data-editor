@@ -6,6 +6,7 @@ from pprint import pprint
 from typing import Any, TYPE_CHECKING
 from utils.data_utils import smart_cast
 from read_and_write import read_file, write_file
+from widgets.quick_fill import QuickFill
 
 
 if TYPE_CHECKING:
@@ -19,33 +20,6 @@ def add_command(*commands_list: list[str]) -> Callable:
         for command in commands_list:
             data_commands[command]: Callable = action
     return wrapper
-
-@add_command("qf", "quick-fill")
-def quick_fill(dn: "DataNavigator", *_) -> None:
-    """Editing mode for quick filling dict values and list items."""
-    def qf(data: Any) -> Any:
-        if isinstance(data, list):
-            for i, item in enumerate(data):
-                if isinstance(item, (dict, list)):
-                    qf(item)
-                else:
-                    print(f"i: {i}, item: {item}")
-                    data[i] = smart_cast(input("item: "))
-
-        elif isinstance(data, dict):
-            for key, value in data.items():
-                if isinstance(value, (dict, list)):
-                    qf(value)
-                else:
-                    print(f"{key}: {value}")
-                    data[key] = smart_cast(input(f"{key}: "))
-
-        else:
-            print(f"data: {data}")
-            data = smart_cast(input("new value: "))
-
-        return data
-    qf(dn.data)
 
 @add_command("append")
 def append_data(dn: "DataNavigator", args) -> None:
@@ -114,6 +88,11 @@ def del_val(dn: "DataNavigator", values: list[str]) -> None:
 
         dn.change_data(new_value, "current", force_type=True)
 
+@add_command("ls", "list")
+def list_data(dn: "DataNavigator", *_) -> None:
+    """Print data in current working data path."""
+    pprint(dn.get_data("current"))
+
 @add_command("cd")
 def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
     """Move path based on given indexes."""
@@ -139,10 +118,10 @@ def move(dn: "DataNavigator", indexes: list[str] | str) -> None:
 
     pprint(dn.get_data("current"))
 
-@add_command("ls", "list")
-def list_data(dn: "DataNavigator", *_) -> None:
-    """Print data in current working data path."""
-    pprint(dn.get_data("current"))
+@add_command("qf", "quick-fill")
+def quick_fill(dn: "DataNavigator", *_) -> None:
+    """Editing mode for quick filling dict values and list items."""
+    QuickFill(dn.data).run()
 
 @add_command("print")
 def print_attr(dn: "DataNavigator", var_names: list[str]) -> None:
