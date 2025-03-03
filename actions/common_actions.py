@@ -26,14 +26,15 @@ def add_command(*commands_list: tuple[str, ...]) -> Callable:
 @add_command("edit")
 def edit_file(nm: "NavigatorManager", file: list[str]) -> None:
     """Open file in DataNavigator instance"""
-    filename: str = " ".join(file)
-    abs_filename: Path = (nm.file_navigator.path / filename).resolve()
-    data: Any = read_file(abs_filename)
-
-    dn: DataNavigator = DataNavigator(data, abs_filename)
+    if file:
+        filename: str = " ".join(file)
+        abs_filename: Path = (nm.file_navigator.path / filename).resolve()
+        data: Any = read_file(abs_filename)
+        dn: DataNavigator = DataNavigator(data, abs_filename)
+    else:
+        dn: DataNavigator = DataNavigator()
 
     nm.data_navigators.append(dn)
-
     nm.active_navigator: DataNavigator = nm.data_navigators[-1]
 
 @add_command("close")
