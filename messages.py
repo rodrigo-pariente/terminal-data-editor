@@ -1,4 +1,5 @@
 """Module for having consistent error messages in the project applications."""
+
 from collections.abc import Callable
 
 
