@@ -44,3 +44,25 @@ def change_data_by_path(data: Any, path: Path, new_data: Any) -> Any:
     masked_data[path.name]: Any = new_data
 
     return data
+
+def template_from_data(data: Any):
+    """Makes template out of given data."""
+    if isinstance(data, list):
+        for i, item in enumerate(data):
+            if isinstance(item, (dict, list)):
+                template_from_data(item)
+            else:
+                data[i] = f"TEMPLATE_{str(type(item)).upper()}"
+
+    elif isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, (dict, list)):
+                template_from_data(value)
+            else:
+                data[key] = f"TEMPLATE_{str(type(value)).upper()}"
+
+    else:
+        print(f"data: {data}")
+        data = f"TEMPLATE_{str(type(data)).upper()}"
+
+    return data
