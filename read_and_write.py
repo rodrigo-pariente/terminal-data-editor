@@ -35,10 +35,13 @@ add_func_to_write: Callable = add_func_to_dict(write_functions)
 
 def read_file(filename: str) -> Any:
     """Read file content if formart is supported."""
-    ext = os.path.splitext(filename)[1].lower()
+    ext: str = os.path.splitext(filename)[1].lower()
+
+    if not ext:
+        ext = "FORMAT_WITHOUT_EXTENSION"
 
     if ext not in SUPPORTED_FORMATS:
-        perror("UnsupportedFormats",
+        perror("UnsupportedFormat",
                 format=ext,
                 supported=str(SUPPORTED_FORMATS)
         )

@@ -149,10 +149,22 @@ def restart(dn: "DataNavigator", *_) -> None:
     pprint(dn.get_data("current"))
 
 @add_command("save")
-def save(dn: "DataNavigator", *_) -> None:
+def save_file(dn: "DataNavigator", *_) -> None:
     """Save DataNavigator modified data into filename."""
     if dn.filename is None:
         dn.filename: Path = Path(input("filename: "))
+    write_file(dn.filename, dn.data)
+    print(f"Saved at {dn.filename}.")
+
+@add_command("saveas")
+def save_as(dn: "DataNavigator", args: list[str]) -> None:
+    """Change DataNavigator file to another and save."""
+    if len(args) != 1:
+        print("Usage: saveas <filename>")
+        return
+
+    new_filename: str = args[0]
+    dn.filename = (dn.filename.parent / new_filename).resolve()
     write_file(dn.filename, dn.data)
     print(f"Saved at {dn.filename}.")
 

@@ -2,15 +2,13 @@
 
 import argparse
 from pathlib import Path
-import os
 import sys
-
+from typing import Any
 from widgets.data_navigator import DataNavigator
 from widgets.file_navigator import FileNavigator
 from widgets.widget_manager import WidgetManager
 from read_and_write import read_file, write_file
 from utils.data_utils import change_data_by_path, smart_cast
-from messages import perror
 
 def main():
     """Main function."""
@@ -19,6 +17,7 @@ def main():
     parser.add_argument(
         "-f",
         "--filename",
+        nargs="+",
         help="JSON file directory's.",
         type=str,
         default=None
@@ -53,25 +52,23 @@ def main():
     args = parser.parse_args()
     path = Path(args.path)
 
-    if args.filename is not None:
-        if os.path.isfile(args.filename):
-            data = read_file(args.filename)
-        else:
-            if args.make:
-                data = ""
-                write_file(args.filename, data)
-            else:
-                perror("FileNotFound", filename=args.filename)
-                sys.exit(1)
-    else:
-        data = None
-
     if args.new_value is None:
-        dn: DataNavigator = DataNavigator(data, args.filename, path, (not args.literal_off))
+        data_navigators: list[DataNavigator] = []
+        if args.filename:
+            for filename in args.filename:
+                data: Any = read_file(filename)
+                literal: bool = not args.literal_off
+                dn = DataNavigator(data, filename, Path(), literal)
+                data_navigators.append(dn)
         fn: FileNavigator = FileNavigator()
-        wm: WidgetManager = WidgetManager([dn], fn)
+        wm: WidgetManager = WidgetManager(data_navigators, fn)
         wm.run()
+
     else:
+        if args.filename != 1:
+            print("ERROR: For quick changing values in CLI, give one filename.")
+            sys.exit(1)
+        data = read_file(args.filename[0])
         if not args.literal_off:
             new_value = smart_cast(args.new_value)
         else:
