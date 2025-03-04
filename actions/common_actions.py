@@ -35,37 +35,52 @@ def edit_file(nm: "NavigatorManager", file: list[str]) -> None:
         dn: DataNavigator = DataNavigator()
 
     nm.data_navigators.append(dn)
-    nm.active_navigator: DataNavigator = nm.data_navigators[-1]
+    nm.active_widget: DataNavigator = nm.data_navigators[-1]
 
 @add_command("close")
-def close_data_navigator(nm: "NavigatorManager", args: list[str]) -> None:
-    """Close editor of given index or current editor active if no index given."""
-    if args:
-        if len(args) > 1 or not args[0].isdigit():
-            print("Usage: close [index]")
+def close_widget(nm: "NavigatorManager", args: list[str]) -> None:
+    """Close tab of given index or current tabe if no index given."""
+    if not args:
+        if nm.active_widget is None:
+            print("ERROR: No widget is opened.")
             return
 
-        index: int = int(args[0])
-        nm.data_navigators.pop(index)
+        if isinstance(nm.active_widget, DataNavigator):
+            nm.data_navigators.remove(nm.active_widget)
+        elif isinstance(nm.active_widget, FileNavigator):
+            nm.file_navigators.remove(nm.active_widget)
+        else:
+            raise NotImplementedError("Was passed not implemented widget.")
+
     else:
-        if not isinstance(nm.active_navigator, DataNavigator):
-            print("ERROR: Select editor to close first.")
-            return
-        if not nm.data_navigators:
-            print("ERROR: No editor opened.")
+        if len(args) != 2 or not args[1].isdigit():
+            print("Usage: close <explorer/editor> [tab_index]")
             return
 
-        nm.data_navigators.remove(nm.active_navigator)
+        widget: str = args[0]
+        index: int = int(args[1])
+        try:
+            match widget.lower():
+                case "editor" | "d":
+                    nm.data_navigators.pop(index)
+                case "explorer" | "x":
+                    nm.file_navigators.pop(index)
+                case _:
+                    print("Usage: close <explorer/editor> [tab_index]")
+                    return
+        except IndexError:
+            print("ERROR: Index out of range.")
+            return
 
-    if nm.data_navigators:
-        nm.active_navigator: DataNavigator = nm.data_navigators[-1]
-    else:
-        nm.active_navigator: FileNavigator = nm.file_navigator
+    nm.automatic_refocus()
 
 @add_command("explorer")
 def focus_file_navigator(nm: "NavigatorManager", *_) -> None:
     """Focus NavigatorManager in its FileNavigator instance."""
-    nm.active_navigator = nm.file_navigator
+    if not nm.file_navigators:
+        fn: FileNavigator = FileNavigator()
+        nm.file_navigators.append(fn)
+    nm.active_widget = nm.file_navigators[-1]
 
 @add_command("editor")
 def focus_data_navigator(nm: "NavigatorManager", args: list[str]) -> None:
@@ -84,10 +99,10 @@ def focus_data_navigator(nm: "NavigatorManager", args: list[str]) -> None:
             return
     else:
         index: int = 0
-    nm.active_navigator = nm.data_navigators[index]
+    nm.active_widget = nm.data_navigators[index]
 
-@add_command("ptabs", "pt")
-def print_editors(nm: "NavigatorManager", *_) -> None:
+@add_command("print-tabs", "tabs")
+def print_widgets(nm: "NavigatorManager", *_) -> None:
     """Print current oppened editors"""
     for i, data_navigator in enumerate(nm.data_navigators):
         print(f"\nindex: {i}\t file: {data_navigator.filename} ")
