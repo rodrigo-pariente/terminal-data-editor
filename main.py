@@ -3,16 +3,18 @@
 import argparse
 from pathlib import Path
 import os
+import sys
+
 from widgets.data_navigator import DataNavigator
 from widgets.file_navigator import FileNavigator
-from widgets.navigator_manager import NavigatorManager
+from widgets.widget_manager import WidgetManager
 from read_and_write import read_file, write_file
 from utils.data_utils import change_data_by_path, smart_cast
-
+from messages import perror
 
 def main():
     """Main function."""
-    parser = argparse.ArgumentParser(prog="JSON Command Line Editor")
+    parser = argparse.ArgumentParser(prog="Command Line Data Editor")
 
     parser.add_argument(
         "-f",
@@ -59,15 +61,16 @@ def main():
                 data = ""
                 write_file(args.filename, data)
             else:
-                raise SystemExit(f"File {args.filename} does not exist.")
+                perror("FileNotFound", filename=args.filename)
+                sys.exit(1)
     else:
         data = None
 
     if args.new_value is None:
         dn: DataNavigator = DataNavigator(data, args.filename, path, (not args.literal_off))
         fn: FileNavigator = FileNavigator()
-        nm: NavigatorManager = NavigatorManager([dn], [fn])
-        nm.run()
+        wm: WidgetManager = WidgetManager([dn], fn)
+        wm.run()
     else:
         if not args.literal_off:
             new_value = smart_cast(args.new_value)
