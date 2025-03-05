@@ -2,11 +2,14 @@
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from messages import perror
 from utils.shell_utils import (
         copy_anything, delete_anything, move_anything, create_file, create_directory
 )
+from utils.data_utils import get_data_template as get_template
+from read_and_write import read_file, write_file
+
 
 if TYPE_CHECKING:
     from widgets.file_navigator import FileNavigator
@@ -58,6 +61,20 @@ def delete_files(fn: "FileNavigator", paths: list[str]) -> None:
     files: tuple[Path, ...] = pathify(fn.path, paths)
     for file in files:
         delete_anything(file)
+
+@add_command("xt", "extract-template")
+def extract_template_from_file(fn: "FileNavigator", files: list[str]) -> None:
+    """Extract template of data from given file into a new template_file"""
+    if len(files) != 2:
+        print("Usage: extract-template <filename> <template_filename>")
+        return
+    abs_filename: Path = (fn.path / files[0]).resolve()
+    template_filename: Path = Path(fn.path / files[1]).resolve()
+
+    data: Any = read_file(abs_filename)
+    template: Any = get_template(data)
+
+    write_file(template_filename, template)
 
 @add_command("ls", "list")
 def list_files(fn: "FileNavigator", targets: list[str]) -> None:
