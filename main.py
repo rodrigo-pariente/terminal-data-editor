@@ -2,21 +2,21 @@
 
 import argparse
 from pathlib import Path
-import sys
 from typing import Any
 from widgets.data_navigator import DataNavigator
 from widgets.file_navigator import FileNavigator
 from widgets.widget_manager import WidgetManager
-from read_and_write import read_file, write_file
-from utils.data_utils import change_data_by_path, smart_cast
+from read_and_write import read_file
+from utils.data_utils import change_data_in_file
+
 
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(prog="Command Line Data Editor")
 
     parser.add_argument(
-        "-f",
-        "--filename",
+        "-i",
+        "--input_files",
         nargs="+",
         help="JSON file directory's.",
         type=str,
@@ -24,8 +24,9 @@ def main():
     )
 
     parser.add_argument(
-        "-nv", "--new_value",
-        help="New value.",
+        "-s", "--set",
+        nargs="+",
+        help="New value to be set.",
         type=str,
         default=None
     )
@@ -50,12 +51,12 @@ def main():
     )
 
     args = parser.parse_args()
-    path = Path(args.path)
+    path: Path = Path(args.path)
 
-    if args.new_value is None:
+    if args.set is None:
         data_navigators: list[DataNavigator] = []
-        if args.filename:
-            for filename in args.filename:
+        if args.input_files:
+            for filename in args.input_files:
                 data: Any = read_file(filename)
                 literal: bool = not args.literal_off
                 dn = DataNavigator(data, filename, Path(), literal)
@@ -65,16 +66,21 @@ def main():
         wm.run()
 
     else:
-        if args.filename != 1:
-            print("ERROR: For quick changing values in CLI, give one filename.")
-            sys.exit(1)
-        data = read_file(args.filename[0])
-        if not args.literal_off:
-            new_value = smart_cast(args.new_value)
-        else:
-            new_value = args.new_value
-        new_content = change_data_by_path(data, path, new_value)
-        write_file(args.filename, new_content)
+        # if args.input_file != 1:
+        #     print("ERROR: For quick changing values in CLI, give one filename.")
+        #     sys.exit(1)
+        # data = read_file(args.input_file[0])
+        # if not args.literal_off:
+        #     new_value: Any = smart_cast(args.set)
+        # else:
+        #     new_value: str = args.set
+        # new_content: Any = change_data_by_path(data, path, new_value)
+        # write_file(args.input_file, new_content)
+        change_data_in_file(current_directory=Path.cwd(),
+                            files=args.input_files,
+                            path=path,
+                            new_values=args.set,
+                            literal=not args.literal_off)
 
 
 if __name__ == "__main__":

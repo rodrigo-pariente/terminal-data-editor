@@ -1,12 +1,15 @@
 """Common actions between navigators."""
 
+from argparse import ArgumentError
 from collections.abc import Callable
 import os
 from pathlib import Path
 import sys
 from typing import Any, TYPE_CHECKING
+
+from parsing import FunctionArgumentParser
 from read_and_write import read_file
-from utils.data_utils import get_data_template as get_template
+from utils.data_utils import get_template, change_data_in_file
 from widgets.data_navigator import DataNavigator
 from widgets.file_navigator import FileNavigator
 
@@ -24,6 +27,44 @@ def add_command(*commands_list: tuple[str, ...]) -> Callable:
     return wrapper
 
 # widget related
+@add_command("change")
+def change_value_in_file(wm: "WidgetManager", args: list[str]) -> None:
+    """change value of given data_path in given file"""
+    parser = FunctionArgumentParser(
+            func="change",
+            description="Change calue of given data_path in given file."
+    )
+    parser.add_argument("-i", "--input_files",
+                        required=True,
+                        nargs="+",
+                        help="Files with data to change.",
+                        type=str
+    )
+    parser.add_argument("-p", "--path",
+                        required=True,
+                        help="Data_path of data to change",
+                        type=str
+    )
+    parser.add_argument("-s", "--set",
+                        required=True,
+                        nargs="+",
+                        help="New value to be set.",
+                        type=str
+    )
+    parser.add_argument("-nl", "--not_literal",
+                        help="Not Literal: do not cast any given values.",
+                        action="store_true"
+    )
+    try:
+        parsed_args = parser.safe_parse_args(args)
+    except ArgumentError:
+        return
+    change_data_in_file(wm.file_navigator.path,
+                        parsed_args.input_files,
+                        parsed_args.path,
+                        parsed_args.set,
+                        not parsed_args.not_literal)
+
 @add_command("edit")
 def edit_file(wm: "WidgetManager", file: list[str]) -> None:
     """Open file in DataNavigator instance"""
