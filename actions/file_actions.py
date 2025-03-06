@@ -7,7 +7,7 @@ from messages import perror
 from utils.shell_utils import (
         copy_anything, delete_anything, move_anything, create_file, create_directory
 )
-from utils.data_utils import get_data_template as get_template
+from utils.data_utils import get_template
 from read_and_write import read_file, write_file
 
 
