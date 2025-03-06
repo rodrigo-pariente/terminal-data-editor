@@ -66,16 +66,6 @@ def main():
         wm.run()
 
     else:
-        # if args.input_file != 1:
-        #     print("ERROR: For quick changing values in CLI, give one filename.")
-        #     sys.exit(1)
-        # data = read_file(args.input_file[0])
-        # if not args.literal_off:
-        #     new_value: Any = smart_cast(args.set)
-        # else:
-        #     new_value: str = args.set
-        # new_content: Any = change_data_by_path(data, path, new_value)
-        # write_file(args.input_file, new_content)
         change_data_in_file(current_directory=Path.cwd(),
                             files=args.input_files,
                             path=path,
