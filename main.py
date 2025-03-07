@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 from typing import Any
+
 from widgets.data_navigator import DataNavigator
 from widgets.file_navigator import FileNavigator
 from widgets.widget_manager import WidgetManager
@@ -73,4 +74,7 @@ def main():
                             literal=not args.literal_off)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

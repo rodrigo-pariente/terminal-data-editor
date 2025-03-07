@@ -24,24 +24,26 @@ def add_command(*commands_list: list[str]) -> Callable:
 @add_command("append")
 def append_data(dn: "DataNavigator", args) -> None:
     """Append data in current path without rewriting all data to maintain."""
-    new_data = smart_cast(" ".join(args))
-    cur_data = dn.get_data("current")
+    for arg in args:
+        print(f"arg: {arg}")
+        new_data = smart_cast(arg)
+        cur_data = dn.get_data("current")
 
-    match (new_data, cur_data):
-        case (dict(), dict()):
-            cur_data.update(new_data)
+        match (new_data, cur_data):
+            case (dict(), dict()):
+                cur_data.update(new_data)
 
-        case (list(), list()):
-            cur_data.extend(new_data)
+            case (list(), list()):
+                cur_data.extend(new_data)
 
-        case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
-            if isinstance(cur_data, str) or isinstance(new_data, str):
-                cur_data: str = str(cur_data)
-                new_data: str = str(new_data)
-            dn.change_data(f"{cur_data + new_data}", "current")
+            case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
+                if isinstance(cur_data, str) or isinstance(new_data, str):
+                    cur_data: str = str(cur_data)
+                    new_data: str = str(new_data)
+                dn.change_data(f"{cur_data + new_data}", "current")
 
-        case _:
-            print(f"Could not append {new_data}.")
+            case _:
+                print(f"Could not append {new_data}.")
 
 @add_command("cast")
 def cast_value(dn: "DataNavigator", args: list[str]) -> None:
