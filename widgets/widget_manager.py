@@ -1,8 +1,10 @@
 """NAVIGATOR MANAGER"""
 
+
 from actions.common_actions import common_commands
 from widgets.data_navigator import DataNavigator
 from widgets.file_navigator import FileNavigator
+from parsing import command_parser
 
 
 class WidgetManager:
@@ -27,8 +29,7 @@ class WidgetManager:
     def run(self) -> None:
         """Execute the REPL ambient"""
         while True:
-            command, *args = input(">>>").strip().split()
-
+            command, *args = command_parser(input(">>>"))
             match command.lower():
                 case _ if command in self.active_widget.commands:
                     self.active_widget.commands[command](self.active_widget, args)
