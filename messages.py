@@ -1,11 +1,14 @@
 """Module for having consistent error messages in the project applications."""
 
 from collections.abc import Callable
+import logging
 
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 error_msg = {}
 
-# file_actions.py related:
 def add_error_msg(error_name: str) -> Callable:
     """Add error associated functions to error_msg dictionary."""
     def wrapper(func: Callable) -> str:
@@ -16,8 +19,9 @@ def perror(error_name: str, **kwargs) -> None:
     """Print error message along with possible extra arguments."""
     message = error_msg.get(error_name, "Unknown error: {}")
     formated_message = message.format(**kwargs)
-    print(formated_message)
+    logger.error(formated_message)
 
+# file_actions.py related:
 @add_error_msg("DirectoryAlreadyExists")
 def directory_already_exists() -> str:
     """Error for when file already exists."""
