@@ -72,6 +72,5 @@ def main():
                             new_values=args.set,
                             literal=not args.literal_off)
 
-
 if __name__ == "__main__":
     main()
