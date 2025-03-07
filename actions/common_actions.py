@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from typing import Any, TYPE_CHECKING
 
-from parsing import FunctionArgumentParser
+from parsing import FunctionArgumentParser as FuncArgParser
 from read_and_write import read_file
 from utils.data_utils import get_template, change_data_in_file
 from widgets.data_navigator import DataNavigator
@@ -30,10 +30,8 @@ def add_command(*commands_list: tuple[str, ...]) -> Callable:
 @add_command("change")
 def change_value_in_file(wm: "WidgetManager", args: list[str]) -> None:
     """change value of given data_path in given file"""
-    parser = FunctionArgumentParser(
-            func="change",
-            description="Change calue of given data_path in given file."
-    )
+    parser = FuncArgParser("change",
+                           "Change value of given data_path in given file.")
     parser.add_argument("-i", "--input_files",
                         required=True,
                         nargs="+",
@@ -56,14 +54,15 @@ def change_value_in_file(wm: "WidgetManager", args: list[str]) -> None:
                         action="store_true"
     )
     try:
-        parsed_args = parser.safe_parse_args(args)
+        parsed = parser.safe_parse_args(args)
     except ArgumentError:
         return
+
     change_data_in_file(wm.file_navigator.path,
-                        parsed_args.input_files,
-                        parsed_args.path,
-                        parsed_args.set,
-                        not parsed_args.not_literal)
+                        parsed.input_files,
+                        parsed.path,
+                        parsed.set,
+                        not parsed.not_literal)
 
 @add_command("edit")
 def edit_file(wm: "WidgetManager", file: list[str]) -> None:

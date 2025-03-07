@@ -2,6 +2,7 @@
 
 import argparse
 import shlex
+from typing import Any
 
 
 class FunctionArgumentParser(argparse.ArgumentParser):
@@ -27,25 +28,39 @@ def command_parser(usr_input: str) -> list[str]:
     """Custom parser for the project interests."""
     tokens: list[str] = shlex.split(usr_input, posix=False)
 
-    boxes: dict[str, str] = {"(": ")", "{": "}", "[": "]"}
+    boxes: dict[str, str] = {"(": ")", "{": "}", "[": "]", "$": "$"}
 
     parsed: list[str] = []
     buffer: list[str] = []
-    open_char: None | str = None
+    stack: list[str] = []
     for token in tokens:
-        if open_char:
+        if stack:
             buffer.append(token)
-            if token[-1].endswith(boxes[open_char]):
-                parsed.append(" ".join(buffer))
-                buffer = []
-                open_char = None
+            if token[-1].endswith(boxes[stack[-1]]):
+                stack.pop()
+                if not stack:
+                    parsed.append(" ".join(buffer))
+                    buffer = []
         else:
             if token[0] in boxes and not token.endswith(boxes[token[0]]):
-                open_char = token[0]
+                stack.append(token[0])
                 buffer.append(token)
             else:
                 parsed.append(token)
     if buffer:
         parsed.append(" ".join(buffer))
 
-    return parsed
+    parsed = [x.strip('\'"') for x in parsed]
+
+    parsed_magick = []
+    for token in parsed:
+        if token.startswith("$*") and token.endswith("$"):
+            tokens: Any = eval(token[2:-1])
+            parsed_magick.extend(tokens)
+            continue
+
+        if token.startswith("$") and token.endswith("$"):
+            token: Any = eval(token.strip("$")) # add safe_functions
+        parsed_magick.append(token)
+
+    return parsed_magick

@@ -29,13 +29,28 @@ class WidgetManager:
     def run(self) -> None:
         """Execute the REPL ambient"""
         while True:
-            command, *args = command_parser(input(">>>"))
+            try:
+                command, *args = command_parser(input(">>>"))
+            except ValueError:
+                print("ERROR: Bad use of quotation.")
+                continue
+            except SyntaxError as e:
+                print("ERROR: Bad syntax.")
+                print(e)
+                continue
+
             match command.lower():
                 case _ if command in self.active_widget.commands:
-                    self.active_widget.commands[command](self.active_widget, args)
+                    try:
+                        self.active_widget.commands[command](self.active_widget, args)
+                    except TypeError:
+                        print("ERROR: Passing wrong types args.")
 
                 case _ if command in self.commands:
-                    self.commands[command](self, args)
+                    try:
+                        self.commands[command](self, args)
+                    except TypeError:
+                        print("ERROR: Passing wrong types args.")
 
                 case _:
                     print("ERROR: Invalid command.")
