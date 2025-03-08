@@ -1,4 +1,4 @@
-"""Module for storing custom parsing"""
+"""Module for storing custom parsing methods."""
 
 import argparse
 import shlex
@@ -6,7 +6,7 @@ from typing import Any
 
 
 class FunctionArgumentParser(argparse.ArgumentParser):
-    """ArgumentParser for functions."""
+    """ArgumentParser for the custom REPL commands."""
     def __init__(self, func: str, description: str, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.func = func
@@ -15,7 +15,10 @@ class FunctionArgumentParser(argparse.ArgumentParser):
         self.exit_on_error = False
 
     def safe_parse_args(self, args) -> argparse.Namespace:
-        """Parse given args. Protected from exiting application if ArgumentError raised."""
+        """
+        Parse given args.
+        Protected from exiting application if ArgumentError raised.
+        """
         try:
             parsed = self.parse_args(args)
             return parsed
@@ -25,7 +28,17 @@ class FunctionArgumentParser(argparse.ArgumentParser):
 
 
 def command_parser(usr_input: str) -> list[str]:
-    """Custom parser for the project interests."""
+    """
+    Custom parser for proper tokenizing Python data types, 
+    shell filenames with spaces, and execution of Python expressions
+    from within the REPL with the $python_command$ notation.
+
+    Example of parsing:
+
+    - `command_parser("change -i 'file name.txt' -p age -s $str(10 + 2**3)$")`
+      ['change', '-i', 'file name.txt', '-p', 'age', '-s', '18']
+
+    """
     tokens: list[str] = shlex.split(usr_input, posix=False)
 
     boxes: dict[str, str] = {"(": ")", "{": "}", "[": "]", "$": "$"}
@@ -36,11 +49,11 @@ def command_parser(usr_input: str) -> list[str]:
     for token in tokens:
         if stack:
             buffer.append(token)
-            if token[-1].endswith(boxes[stack[-1]]):
+            if token.endswith(boxes[stack[-1]]):
                 stack.pop()
                 if not stack:
                     parsed.append(" ".join(buffer))
-                    buffer = []
+                    buffer.clear()
         else:
             if token[0] in boxes and not token.endswith(boxes[token[0]]):
                 stack.append(token[0])
@@ -64,3 +77,4 @@ def command_parser(usr_input: str) -> list[str]:
         parsed_magick.append(token)
 
     return parsed_magick
+

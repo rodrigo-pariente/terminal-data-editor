@@ -1,15 +1,26 @@
 """
-Module containing data utilities, such as smart_casting for
-typefying strings,or acessing nested data based on a path.
+Module for storing data utilities used in this project.
+
+This module provides fundamental functions like `smart_cast`, for 
+inteligent type conversions, and `change_data_by_path`, for updating 
+nested data structures.
 """
 
 import ast
+from itertools import repeat
+import logging
 from typing import Any
 from pathlib import Path
+
+from messages import error_msg
 from read_and_write import read_file, write_file
 
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
 def smart_cast(value: str) -> Any:
-    """Cast string to proper type."""
+    """Do a intelligent type conversion of given value."""
     if value.lower() in ("true", "false"):
         return value.lower() == "true"
     try:
@@ -17,33 +28,48 @@ def smart_cast(value: str) -> Any:
     except (SyntaxError, ValueError):
         return value
 
-def get_data_by_path(data: Any, path: Path) -> Any:
+def cast_if_true(data: Any, condition: bool) -> Any:
+   
+    if not condition:
+        return data
+    if isinstance(data, list):
+        return [smart_cast(i) if isinstance(i, str) else i for i in data]
+    return smart_cast(data)
+
+def get_data_by_path(data: Any, data_path: Path | str) -> Any:
     """Get data inside a data structure based in a path."""
-    if path.as_posix() in ("/", ""):
+    data_path: Path = Path(data_path) # is this really necessary?
+    if data_path.as_posix() in ("/", ""):
         return data
 
     indexes: list[str | int] = []
-    for part in path.parts:
-        if part.isdigit():
-            indexes.append(int(part))
+    for index in data_path.parts:
+        if index.isdigit():
+            indexes.append(int(index))
         else:
-            indexes.append(part)
+            indexes.append(index)
 
     current: Any = data
     for i in indexes:
-        current: Any = current[i]
+        try:
+            current: Any = current[i]
+        except KeyError as e:
+            raise KeyError(error_msg["InvalidIndex"]) from e
 
     return current
 
-def change_data_by_path(data: Any, path: str | Path, new_data: Any) -> Any:
+def change_data_by_path(
+    data: Any,
+    data_path: Path | str,
+    new_data: Any
+) -> Any:
     """Change data inside a data structure based in a path."""
-    path: Path = Path(path)
-    if path.as_posix() == ".":
+    data_path: Path = Path(data_path) # is this really necessary?
+    if data_path.as_posix() == ".":
         return new_data
 
-    masked_data: Any = get_data_by_path(data, path.parent)
-    masked_data[path.name]: Any = new_data
-
+    masked_data: Any = get_data_by_path(data, data_path.parent)
+    masked_data[data_path.name]: Any = new_data
     return data
 
 def get_template(data: Any):
@@ -63,45 +89,35 @@ def get_template(data: Any):
                 data[key] = f"TEMPLATE_{str(type(value)).upper()}"
 
     else:
-        print(f"data: {data}")
         data = f"TEMPLATE_{str(type(data)).upper()}"
 
     return data
 
-def cast_if_true(data: Any, condition: bool) -> Any:
-    """Cast given data if condition is true."""
-    if not condition:
-        return data
-    if isinstance(data, list):
-        return [smart_cast(i) if isinstance(i, str) else i for i in data]
-    return smart_cast(data)
-
 def change_data_in_file(
-            current_directory: Path,
-            files: list[str],
-            path: str,
-            new_values: list[str],
-            literal: bool) -> None:
+    filepaths: list[Path],
+    data_path: str,
+    new_values: list[Any],
+) -> None:
     """change value of given data_path in given file"""
-    if len(files) != len(new_values):
+    if len(filepaths) != len(new_values):
         if len(new_values) != 1:
-            print("Give a new_value per file,\
-                or a single value for every file.")
+            error_message: str = (
+                    "ERROR: Give a new_value per file, "
+                    "or a single value for every file."
+            )
+            logger.error(error_message) # will not raise, because of simple handling
             return
-        new_values: list[Any] = new_values * len(files)
-    else:
-        new_values: list[str] = new_values
+        new_values = repeat(new_values[0])
 
-    handled_values: list[Any] = cast_if_true(new_values, literal)
+    for i, filepath in enumerate(filepaths):
+        read_change_write(filepath, data_path, new_values[i])
 
-    cwd: Path = current_directory
-    files: list[Path] = [(cwd / file).resolve() for file in files]
-
-    for i, new_value in enumerate(handled_values):
-        read_change_write(files[i], path, new_value)
-
-def read_change_write(file: str, path: Path, new_value: Any) -> None:
+def read_change_write(
+    filepath: Path,
+    data_path: Path,
+    new_value: Any
+) -> None:
     """Change data in file by path"""
-    data: Any = read_file(file)
-    altered_data: Any = change_data_by_path(data, path, new_value)
-    write_file(file, altered_data)
+    data: Any = read_file(filepath)
+    updated_data: Any = change_data_by_path(data, data_path, new_value)
+    write_file(filepath, updated_data)
