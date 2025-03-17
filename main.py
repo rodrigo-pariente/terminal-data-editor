@@ -34,14 +34,13 @@ $ python3 ./main.py -i path/to/file.json
 
 import argparse
 from pathlib import Path
-import sys
 from typing import Any
 
-from widgets.data_navigator import DataNavigator
-from widgets.file_navigator import FileNavigator
-from widgets.widget_manager import WidgetManager
 from read_and_write import read_file
 from utils.data_utils import cast_if_true, change_data_in_file
+from widgets.data_editor import DataEditor
+from widgets.file_navigator import FileNavigator
+from widgets.widget_manager import WidgetManager
 
 
 def main():
@@ -49,8 +48,7 @@ def main():
     parser = argparse.ArgumentParser(prog="Command Line Data Editor")
 
     parser.add_argument(
-        "-i",
-        "--input_files",
+        "-i", "--input_files",
         nargs="+",
         help="JSON file directory's.",
         type=str,
@@ -74,7 +72,7 @@ def main():
 
     parser.add_argument(
         "-nl", "--literal_off", 
-        help="Not cast value when writing.",
+        help="Do not cast value when writing.",
         action="store_true"
     )
 
@@ -90,17 +88,17 @@ def main():
     literal: bool = not args.literal_off
 
     if args.set is None:
-        data_navigators: list[DataNavigator] = []
+        data_editors: list[DataEditor] = []
         if args.input_files:
             # for each file given, an editor of it will be opened.
             for filename in args.input_files: 
                 data: Any = read_file(filename)
-                dn = DataNavigator(data, filename, Path(), literal)
-                data_navigators.append(dn)
+                de = DataEditor(data, filename, Path(), literal)
+                data_editors.append(de)
         # the REPL ambient is composed by a file explorer (>>> explorer)
         # and tabs of data editors (>>> editor)
         fn: FileNavigator = FileNavigator()
-        wm: WidgetManager = WidgetManager(data_navigators, fn)
+        wm: WidgetManager = WidgetManager(data_editors, fn)
         wm.run()
 
     else:
@@ -109,16 +107,10 @@ def main():
             for filepath in args.input_files
         ]
 
-        change_data_in_file(
-            filepaths=filepaths,
-            data_path=path,
-            new_values=cast_if_true(args.set, not args.literal_off)
-        )
+        new_values: Any = cast_if_true(args.set, not args.literal_off)
+
+        change_data_in_file(filepaths, path, new_values)
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
-
+    main()

@@ -1,170 +1,179 @@
-"""Common actions between navigators."""
+"""Actions that can be executed at any moment in the REPL."""
 
-from argparse import ArgumentError
+import argparse
 from collections.abc import Callable
+from copy import deepcopy
+import logging
 import os
 from pathlib import Path
 import sys
 from typing import Any, TYPE_CHECKING
 
-from parsing import FunctionArgumentParser as FuncArgParser
+from parsing.repl_parser import AttemptToExitError, CommandParser
 from read_and_write import read_file
-from utils.data_utils import get_template, change_data_in_file
-from widgets.data_navigator import DataNavigator
+from utils.data_utils import cast_if_true, change_data_in_file, get_template
+from widgets.data_editor import DataEditor
 from widgets.file_navigator import FileNavigator
 
 
 if TYPE_CHECKING:
     from widgets.widget_manager import WidgetManager
 
-common_commands: dict[str, Callable] = {}
 
-def add_command(*commands_list: tuple[str, ...]) -> Callable:
-    """Decorator to add new commands automaticaly to commands dictionary."""
-    def wrapper(action):
-        for command in commands_list:
-            common_commands[command] = action
-    return wrapper
+logger = logging.getLogger(__name__)
+
+common_parser = CommandParser(
+    prog="Widget Manager", description="A widget orchestrator.",
+    add_help=False, commands_description="Commands to use 👩‍💻"
+)
 
 # widget related
-@add_command("change")
-def change_value_in_file(wm: "WidgetManager", args: list[str]) -> None:
-    """change value of given data_path in given file"""
-    parser = FuncArgParser("change",
-                           "Change value of given data_path in given file.")
-    parser.add_argument("-i", "--input_files",
-                        required=True,
-                        nargs="+",
-                        help="Files with data to change.",
-                        type=str
+@common_parser.add_args(  # see if there's better way to do that
+    "-nl", "--literal_off",
+    help=(
+        "When activated, types won't be casted "
+        "and values will be set as str."
+    ),
+    action="store_true"
+)
+@common_parser.add_args(
+    "-s", "--set",
+    required=True,
+    nargs="+",
+    help="New values to be set.",
+    type=str
+)
+@common_parser.add_args(
+    "-p", "--path",
+    required=True,
+    help="Path of data to be updated. Ex.: dict_key/0/another_key",
+    type=str
+)
+@common_parser.add_args(
+    "-i", "--input_files",
+    required=True,
+    nargs="+",
+    help="Path of files to be changed.",
+    type=str
+)
+@common_parser.add_cmd("change")
+def change_value_in_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
+    """
+    Update the data of files (-i) in give data_path (-p)
+    with the new_values (-s).
+    """
+    filepaths: list[Path] = [
+        (wm.file_navigator.path / filepath).resolve()
+        for filepath in parsed.input_files
+    ]
+
+    change_data_in_file(
+        filepaths=filepaths,
+        data_path=parsed.path,
+        new_values=cast_if_true(parsed.set, not parsed.literal_off)
     )
-    parser.add_argument("-p", "--path",
-                        required=True,
-                        help="Data_path of data to change",
-                        type=str
-    )
-    parser.add_argument("-s", "--set",
-                        required=True,
-                        nargs="+",
-                        help="New value to be set.",
-                        type=str
-    )
-    parser.add_argument("-nl", "--not_literal",
-                        help="Not Literal: do not cast any given values.",
-                        action="store_true"
-    )
+
+@common_parser.add_args("filepaths", nargs="+", help="Path of files to open.")
+@common_parser.add_cmd("edit", help_txt="Open a new editor tab of given file")
+def edit_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # let have default value
+    """Starts new DataEditor instance with given file data, if any."""
+    filepaths = parsed.filepaths
+    new_data_editors: list[DataEditor] = []
+    if filepaths[0] != "null":
+        for filepath in filepaths:
+            abs_filepath: Path = (wm.file_navigator.path / filepath).resolve()
+            data: Any = read_file(abs_filepath)
+            new_data_editors.append(DataEditor(data, abs_filepath))
+    else:
+        new_data_editors.append(DataEditor())
+
+    wm.data_editors.extend(new_data_editors)
+    wm.active_widget = wm.data_editors[-1]
+
+@common_parser.add_args(
+    "editor_tab",
+    help="Index of editor tab with data to get template of.",
+    type=int
+)
+@common_parser.add_cmd("gt", "get-template")
+def get_template_from_de(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # see integ
+    """Get-template of data in editor of given index."""
     try:
-        parsed = parser.safe_parse_args(args)
-    except ArgumentError:
+        data: Any = deepcopy(wm.data_editors[parsed.editor_tab].data)
+    except IndexError:
+        logger.error("Not that many editors opened.")
         return
 
-    change_data_in_file(wm.file_navigator.path,
-                        parsed.input_files,
-                        parsed.path,
-                        parsed.set,
-                        not parsed.not_literal)
+    template_of_data: Any = get_template(data)
+    editor_of_template: DataEditor = DataEditor(template_of_data)
 
-@add_command("edit")
-def edit_file(wm: "WidgetManager", file: list[str]) -> None:
-    """Open file in DataNavigator instance"""
-    if file:
-        filename: str = " ".join(file)
-        abs_filename: Path = (wm.file_navigator.path / filename).resolve()
-        data: Any = read_file(abs_filename)
-        dn: DataNavigator = DataNavigator(data, abs_filename)
-    else:
-        dn: DataNavigator = DataNavigator()
+    wm.data_editors.append(editor_of_template)
+    wm.active_widget: DataEditor = editor_of_template
 
-    wm.data_navigators.append(dn)
-    wm.active_widget: DataNavigator = wm.data_navigators[-1]
-
-@add_command("gt", "get-template")
-def get_template_from_dn(wm: "WidgetManager", args: list[str]) -> None:
-    """Get template model of data in current editor."""
-    if not args and isinstance(wm.active_widget, DataNavigator):
-        template_from_data: Any = get_template(wm.active_widget.data)
-    elif len(args) == 1 and args[0].isdigit():
-        index: int = int(args[0])
-        try:
-            template_from_data: Any = get_template(wm.data_navigators[index])
-        except IndexError:
-            print("ERROR: Not that many editors opened.")
-            return
-    else:
-        print("Usage: get-template <editor_tab>")
-        return
-    editor_of_template: DataNavigator = DataNavigator(template_from_data)
-    wm.data_navigators.append(editor_of_template)
-    wm.active_widget: DataNavigator = editor_of_template
-
-@add_command("close")
-def close_data_navigator(wm: "WidgetManager", args: list[str]) -> None:
-    """Close current or from given index DataNavigator instance."""
+@common_parser.add_args("tab", type=int, help="index of tab to close.")
+@common_parser.add_cmd("close")
+def close_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # see integ
+    """Close current or from given index DataEditor instance."""
     # Close
-    if not args and isinstance(wm.active_widget, DataNavigator):
-        wm.data_navigators.remove(wm.active_widget)
-    elif len(args) == 1 and args[0].isdigit():
-        try:
-            index: int = int(args[0])
-            wm.data_navigators.pop(index)
-        except IndexError:
-            print("ERROR: Not that many editors opened.")
-            return
-    else:
-        print("Usage: close [tab_index]")
+    try:
+        wm.data_editors.pop(parsed.tab)
+    except IndexError:
+        print("ERROR: Not that many editors opened.")
         return
 
     # Refocus
-    if wm.active_widget not in wm.data_navigators:
-        if wm.data_navigators:
-            wm.active_widget: DataNavigator = wm.data_navigators[-1]
+    if wm.active_widget not in wm.data_editors:
+        if wm.data_editors:
+            wm.active_widget: DataEditor = wm.data_editors[-1]
         else:
             wm.active_widget: FileNavigator = wm.file_navigator
 
-@add_command("explorer")
+@common_parser.add_args("tab", type=int, help="index of tab to focus.")
+@common_parser.add_cmd("editor")
+def focus_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # see integ
+    """Focus WidgetManager in its DataEditor instance."""
+    wm.data_editors.append(DataEditor())
+    try:
+        wm.active_widget = wm.data_editors[parsed.tab]
+    except IndexError:
+        print("ERROR: Not that many editors opened.")
+
+@common_parser.add_cmd("explorer")
 def focus_file_navigator(wm: "WidgetManager", *_) -> None:
     """Focus WidgetManager in its FileNavigator instance."""
     wm.active_widget = wm.file_navigator
 
-@add_command("editor")
-def focus_data_navigator(wm: "WidgetManager", args: list[str]) -> None:
-    """Focus WidgetManager in its DataNavigator instance."""
-    if not args:
-        if not wm.data_navigators:
-            wm.data_navigators.append(DataNavigator())
-        index: int = 0
-    elif len(args) == 1 and args[0].isdigit() and wm.data_navigators:
-        index: int = int(args[0])
-    else:
-        print("Usage: editor [index]")
-        return
-
-    try:
-        wm.active_widget = wm.data_navigators[index]
-    except IndexError:
-        print("ERROR: Not that many editors opened.")
-
-@add_command("print-tabs", "tabs")
+@common_parser.add_cmd("print-tabs", "tabs")
 def print_widgets(wm: "WidgetManager", *_) -> None:
     """Print current oppened editors"""
-    for i, data_navigator in enumerate(wm.data_navigators):
-        print(f"\nindex: {i}\t file: {data_navigator.filename} ")
+    for i, data_editor in enumerate(wm.data_editors):
+        print(f"\nindex: {i}\t file: {data_editor.filename} ")
+
+@common_parser.add_cmd("help")
+def print_help(wm: "WidgetManager", *_) -> None:
+    """print this help message."""
+    wm.parser.print_help()
+    wm.active_widget.parser.print_help()
 
 # unespecific
-@add_command("cls", "clear")
+@common_parser.add_cmd("cls", "clear")
 def clear_screen(*_) -> None:
     """Clean the screen without leaving the REPL"""
     os.system("cls" if os.name == "nt" else "clear")
 
-@add_command("exit", "quit", "q")
+@common_parser.add_args(" ", nargs="+")
+@common_parser.add_cmd("#")
+def commentary(*_) -> None:
+    """commentary: does nothing."""
+    pass
+
+@common_parser.add_cmd("exit", "quit", "q")
 def exit_repl(*_) -> None:
     """Exits the application."""
     sys.exit(0)
 
-@add_command("!")
-def shell_commands(_, args: list[str]) -> None:
+@common_parser.add_args("command", nargs="+")
+@common_parser.add_cmd("!")
+def shell_commands(_, parsed: argparse.Namespace) -> None:
     """Let user pass shell commands without leaving the application."""
-    if not args:
-        print("Usage: ! <shell command>")
-        return
-    os.system(" ".join(args))
+    os.system(" ".join(parsed.command))

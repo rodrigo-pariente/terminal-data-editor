@@ -1,35 +1,15 @@
-"""Module for storing custom parsing methods."""
+""" Custom lexer method. """
 
-import argparse
+import re
 import shlex
 from typing import Any
 
-
-class FunctionArgumentParser(argparse.ArgumentParser):
-    """ArgumentParser for the custom REPL commands."""
-    def __init__(self, func: str, description: str, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.func = func
-        self.description = description
-        self.prog = self.func
-        self.exit_on_error = False
-
-    def safe_parse_args(self, args) -> argparse.Namespace:
-        """
-        Parse given args.
-        Protected from exiting application if ArgumentError raised.
-        """
-        try:
-            parsed = self.parse_args(args)
-            return parsed
-        except argparse.ArgumentError as e:
-            self.print_usage()
-            raise e
+from parsing.safe_functions import SAFE_FUNCTIONS
 
 
-def command_parser(usr_input: str) -> list[str]:
+def lexer(usr_input: str) -> list[str]:
     """
-    Custom parser for proper tokenizing Python data types, 
+    Custom lexer/pre-parser for proper tokenizing Python data types, 
     shell filenames with spaces, and execution of Python expressions
     from within the REPL with the $python_command$ notation.
 
@@ -37,7 +17,6 @@ def command_parser(usr_input: str) -> list[str]:
 
     - `command_parser("change -i 'file name.txt' -p age -s $str(10 + 2**3)$")`
       ['change', '-i', 'file name.txt', '-p', 'age', '-s', '18']
-
     """
     tokens: list[str] = shlex.split(usr_input, posix=False)
 
@@ -65,16 +44,16 @@ def command_parser(usr_input: str) -> list[str]:
 
     parsed = [x.strip('\'"') for x in parsed]
 
+    # magick: evaluate python expressions in between $
     parsed_magick = []
     for token in parsed:
         if token.startswith("$*") and token.endswith("$"):
-            tokens: Any = eval(token[2:-1])
+            tokens: Any = safe_func(token[2:-1])
             parsed_magick.extend(tokens)
             continue
 
         if token.startswith("$") and token.endswith("$"):
-            token: Any = eval(token.strip("$")) # add safe_functions
+            token: Any = safe_func(token.strip("$")) 
         parsed_magick.append(token)
 
     return parsed_magick
-

@@ -1,6 +1,7 @@
 """Module for holding QuickFill, widget for fast filling data."""
 
 from typing import Any
+
 from utils.data_utils import smart_cast
 
 

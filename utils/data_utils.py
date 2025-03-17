@@ -29,16 +29,15 @@ def smart_cast(value: str) -> Any:
         return value
 
 def cast_if_true(data: Any, condition: bool) -> Any:
-   
+    """If condition is met, data will be casted and returned."""
     if not condition:
         return data
     if isinstance(data, list):
         return [smart_cast(i) if isinstance(i, str) else i for i in data]
     return smart_cast(data)
 
-def get_data_by_path(data: Any, data_path: Path | str) -> Any:
+def get_data_by_path(data: Any, data_path: Path) -> Any:
     """Get data inside a data structure based in a path."""
-    data_path: Path = Path(data_path) # is this really necessary?
     if data_path.as_posix() in ("/", ""):
         return data
 
@@ -60,16 +59,29 @@ def get_data_by_path(data: Any, data_path: Path | str) -> Any:
 
 def change_data_by_path(
     data: Any,
-    data_path: Path | str,
+    data_path: Path,
     new_data: Any
 ) -> Any:
     """Change data inside a data structure based in a path."""
-    data_path: Path = Path(data_path) # is this really necessary?
     if data_path.as_posix() == ".":
         return new_data
 
     masked_data: Any = get_data_by_path(data, data_path.parent)
-    masked_data[data_path.name]: Any = new_data
+
+    last_index: int | str
+    if data_path.name.isdigit():
+        last_index = int(data_path.name)
+    else:
+        last_index = data_path.name
+
+    try:
+        masked_data[last_index]: Any = new_data
+    except KeyError as e: # this is ugly <-----------
+        if isinstance(masked_data, dict) and isinstance(last_index, int):
+            masked_data[str(last_index)] = new_data
+        else:
+            raise KeyError(e) from e
+
     return data
 
 def get_template(data: Any):
@@ -102,10 +114,10 @@ def change_data_in_file(
     if len(filepaths) != len(new_values):
         if len(new_values) != 1:
             error_message: str = (
-                    "ERROR: Give a new_value per file, "
-                    "or a single value for every file."
+                "ERROR: Give a new_value per file, "
+                "or a single value for every file."
             )
-            logger.error(error_message) # will not raise, because of simple handling
+            logger.error(error_message)
             return
         new_values = repeat(new_values[0])
 

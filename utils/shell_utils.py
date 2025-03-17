@@ -1,8 +1,8 @@
 """Module for some high-level Shell Utilities used in this project."""
 
 from pathlib import Path
-import shutil
 import os
+import shutil
 from messages import perror
 
 
