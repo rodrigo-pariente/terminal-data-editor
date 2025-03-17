@@ -3,3 +3,4 @@ venv/
 data_files/
 __pycache__/
 tests/
+to-do.md
