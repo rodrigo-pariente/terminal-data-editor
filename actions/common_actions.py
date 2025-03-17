@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 common_parser = CommandParser(
     prog="Widget Manager", description="A widget orchestrator.",
-    add_help=False, commands_description="Commands to use 👩‍💻"
+    commands_description="Commands to use 🌊"
 )
 
 # widget related
@@ -73,13 +73,19 @@ def change_value_in_file(wm: "WidgetManager", parsed: argparse.Namespace) -> Non
         new_values=cast_if_true(parsed.set, not parsed.literal_off)
     )
 
-@common_parser.add_args("filepaths", nargs="+", help="Path of files to open.")
+@common_parser.add_args(
+    "filepaths",
+    nargs="*",
+    help="Path of files to open.",
+    default=[None]
+)
 @common_parser.add_cmd("edit", help_txt="Open a new editor tab of given file")
-def edit_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # let have default value
+def edit_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
     """Starts new DataEditor instance with given file data, if any."""
     filepaths = parsed.filepaths
+
     new_data_editors: list[DataEditor] = []
-    if filepaths[0] != "null":
+    if filepaths != [None]:
         for filepath in filepaths:
             abs_filepath: Path = (wm.file_navigator.path / filepath).resolve()
             data: Any = read_file(abs_filepath)
@@ -91,15 +97,25 @@ def edit_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # let h
     wm.active_widget = wm.data_editors[-1]
 
 @common_parser.add_args(
-    "editor_tab",
+    "tab",
+    nargs="?",
     help="Index of editor tab with data to get template of.",
-    type=int
+    type=int,
+    default=None
 )
 @common_parser.add_cmd("gt", "get-template")
-def get_template_from_de(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # see integ
+def get_template_from_de(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
     """Get-template of data in editor of given index."""
+    if parsed.tab == None:
+        try:
+            tab_index: int = wm.data_editors.index(wm.active_widget)
+        except ValueError:
+            return
+    else:
+        tab_index: int = parsed.editor_tab
+    
     try:
-        data: Any = deepcopy(wm.data_editors[parsed.editor_tab].data)
+        data: Any = deepcopy(wm.data_editors[tab_index].data)
     except IndexError:
         logger.error("Not that many editors opened.")
         return
@@ -110,33 +126,55 @@ def get_template_from_de(wm: "WidgetManager", parsed: argparse.Namespace) -> Non
     wm.data_editors.append(editor_of_template)
     wm.active_widget: DataEditor = editor_of_template
 
-@common_parser.add_args("tab", type=int, help="index of tab to close.")
+@common_parser.add_args(
+    "tab",
+    nargs="?",
+    type=int,
+    help="index of tab to close.",
+    default=None
+)
 @common_parser.add_cmd("close")
-def close_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # see integ
+def close_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
     """Close current or from given index DataEditor instance."""
-    # Close
+    # select the apropriate tab index
+    if parsed.tab == None:
+        try:
+            tab_index: int = wm.data_editors.index(wm.active_widget)
+        except ValueError:
+            return
+    else:
+        tab_index: int = parsed.editor_tab
+
+    # close
     try:
-        wm.data_editors.pop(parsed.tab)
+        wm.data_editors.pop(tab_index)
     except IndexError:
         print("ERROR: Not that many editors opened.")
         return
 
-    # Refocus
+    # refocus
     if wm.active_widget not in wm.data_editors:
         if wm.data_editors:
             wm.active_widget: DataEditor = wm.data_editors[-1]
         else:
             wm.active_widget: FileNavigator = wm.file_navigator
 
-@common_parser.add_args("tab", type=int, help="index of tab to focus.")
+@common_parser.add_args(
+    "tab",
+    nargs="?",
+    type=int,
+    help="index of tab to focus.",
+    default=-1
+)
 @common_parser.add_cmd("editor")
-def focus_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:  # see integ
+def focus_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
     """Focus WidgetManager in its DataEditor instance."""
-    wm.data_editors.append(DataEditor())
+    if not wm.data_editors:
+        wm.data_editors.append(DataEditor())
     try:
         wm.active_widget = wm.data_editors[parsed.tab]
     except IndexError:
-        print("ERROR: Not that many editors opened.")
+        logger.error("Not that many editors opened.")
 
 @common_parser.add_cmd("explorer")
 def focus_file_navigator(wm: "WidgetManager", *_) -> None:
@@ -147,7 +185,7 @@ def focus_file_navigator(wm: "WidgetManager", *_) -> None:
 def print_widgets(wm: "WidgetManager", *_) -> None:
     """Print current oppened editors"""
     for i, data_editor in enumerate(wm.data_editors):
-        print(f"\nindex: {i}\t file: {data_editor.filename} ")
+        print(f"file: {data_editor.filename} ({i})")
 
 @common_parser.add_cmd("help")
 def print_help(wm: "WidgetManager", *_) -> None:
@@ -161,7 +199,7 @@ def clear_screen(*_) -> None:
     """Clean the screen without leaving the REPL"""
     os.system("cls" if os.name == "nt" else "clear")
 
-@common_parser.add_args(" ", nargs="+")
+@common_parser.add_args("comment", nargs="*")
 @common_parser.add_cmd("#")
 def commentary(*_) -> None:
     """commentary: does nothing."""
@@ -172,7 +210,7 @@ def exit_repl(*_) -> None:
     """Exits the application."""
     sys.exit(0)
 
-@common_parser.add_args("command", nargs="+")
+@common_parser.add_args("command", nargs="*", )
 @common_parser.add_cmd("!")
 def shell_commands(_, parsed: argparse.Namespace) -> None:
     """Let user pass shell commands without leaving the application."""

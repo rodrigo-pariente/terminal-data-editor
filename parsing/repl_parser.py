@@ -32,6 +32,7 @@ class CommandParser(argparse.ArgumentParser):
         commands_title: str | None = None,
         commands_description: str = "",
         commands_help: str = "",
+        formatter_class: argparse.HelpFormatter = REPLHelpFormater,
         exit_on_error: bool = False,
         *args, **kwargs
     ) -> None:
@@ -49,7 +50,7 @@ class CommandParser(argparse.ArgumentParser):
             *args, **kwargs,
             add_help=False,
             exit_on_error=exit_on_error,
-            formatter_class=REPLHelpFormater
+            formatter_class=formatter_class
         )
 
         # help text updated to match REPL ambient, not CLI
@@ -76,7 +77,11 @@ class CommandParser(argparse.ArgumentParser):
         self,
         action: Callable,
         name: str | None = None,
-        help_txt: str | None = None
+        help_txt: str | None = None,
+        prog: str | None = None,
+        formatter_class: argparse.HelpFormatter = argparse.HelpFormatter,
+        add_commands: bool = False,
+        **kwargs
     ) -> Self:
         """
         Adds a command (subparser) to the REPL.
@@ -90,22 +95,35 @@ class CommandParser(argparse.ArgumentParser):
 
             help_txt (str, optional): The help text. Defaults to action docstring.
 
+            prog (str, optional): the program name, is set by default as the
+            given name, because argparse tries to format it as a subcommand.
+
+            formatter_class (argparse.HelpFormatter): Default to argparse
+            base HelpFormatter so the command name be displayed in usage.
+
+            add_command (bool, optional): By default is False, so commands
+            does not have subcommands.
+
         Returns:
             REPLParser: A command parser instance
         """
         if name is None:
-            name = action.__name__
+            name: str = action.__name__
         if help_txt is None:
-            help_txt = action.__doc__
+            help_txt: str = action.__doc__
+        if prog is None:
+            prog: str = name
 
         command_parser = self.commands.add_parser(
             name=name,
+            prog=prog,
             description=help_txt,
             help=help_txt,
-            add_commands=False
+            add_commands=add_commands,
+            formatter_class=formatter_class,
+            **kwargs
         )
         command_parser.set_defaults(func=action)
- 
         return command_parser
 
     def parse_args(self, args=None, namespace=None) -> argparse.Namespace:
@@ -124,34 +142,44 @@ class CommandParser(argparse.ArgumentParser):
             raise AttemptToExitError
 
     # decorators for quick action setting.
-    def add_cmd(self, *aliases: str, help_txt: str | None = None) -> Callable:
+    def add_cmd(
+        self,
+        *names: str,
+        help_txt: str | None = None,
+        positionals_title: str | None = None,
+        **kwargs
+    ) -> Callable:
         """
         Decorator for adding a command with n aliases into the parser.
         Returns the last command_parser made.
         """
-        def wrapper(action: Callable) -> set[Self]:
-            command_names: tuple[str, ...]
-            command_names = aliases if aliases else (action.__name__)
+        def wrapper(action: Callable) -> Self:
+            command_name: str
+            aliases: list[str]
+            if names:
+                command_name, *aliases =  list(names)
+            else:
+                command_name = action.__name__
+                aliases = []
+
             command_help: str = help_txt or action.__doc__
 
-            # each alias have it's own parser
-            command_parsers: set[Self] = set()
-            for command_name in command_names:
-                command_parser: Self = self.add_command(
-                    action, command_name, command_help
-                )
-                command_parsers.add(command_parser)
+            command_parser: Self = self.add_command(
+                action, command_name, command_help, aliases=aliases, **kwargs
+            )
+            
+            if positionals_title is not None:
+                command_parser._positionals.title = positionals_title
 
-            return command_parsers
+            return command_parser
         return wrapper
 
     @staticmethod
     def add_args(*args, **kwargs) -> Callable:
         """Decorator for adding arguments to the newly made command."""
-        def wrapper(command_parsers: set[Self]) -> Self:
-            for command_parser in command_parsers:
-                command_parser.add_argument(*args, **kwargs)
-            return command_parsers
+        def wrapper(command_parser: Self) -> Self:
+            command_parser.add_argument(*args, **kwargs)
+            return command_parser
         return wrapper
 
 

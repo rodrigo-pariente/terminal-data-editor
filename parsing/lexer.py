@@ -48,12 +48,12 @@ def lexer(usr_input: str) -> list[str]:
     parsed_magick = []
     for token in parsed:
         if token.startswith("$*") and token.endswith("$"):
-            tokens: Any = safe_func(token[2:-1])
+            tokens: Any = eval(token[2:-1])
             parsed_magick.extend(tokens)
             continue
 
         if token.startswith("$") and token.endswith("$"):
-            token: Any = safe_func(token.strip("$")) 
+            token: Any = eval(token.strip("$")) 
         parsed_magick.append(token)
 
     return parsed_magick
