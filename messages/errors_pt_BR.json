@@ -1,0 +1,11 @@
+{
+  "DirectoryAlreadyExists": "O diretório \"{dirname}\" já existe.",
+  "DestinationMustBeDirectory": "O destino \"{dirname}\" deve ser um diretório.",
+  "DirectoryNotFound": "Não foi possível encontrar o diretório \"{direname}\".",
+  "DirectoryOrFileNotFound": "Não foi possível encontrar o arquivo/diretório \"{filename}\".",
+  "FileAlreadyExists": "O arquivo {filename} já existe.",
+  "PermissionDenied": "Permissão negada. Tente executar este aplicativo com privilégios de administrador.",
+  "UnsupportedFormat": "O formato {format} não é suportado. Formatos suportados: {supported}",
+  "FileNotFound": "{filename} não encontrado.",
+  "InvalidIndex": "O índice {index} no caminho fornecido não existe em {data}."
+}

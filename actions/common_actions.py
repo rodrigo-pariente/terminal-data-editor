@@ -9,8 +9,10 @@ from pathlib import Path
 import sys
 from typing import Any, TYPE_CHECKING
 
+from actions.action_exceptions import ActionError
 from parsing.repl_parser import AttemptToExitError, CommandParser
-from read_and_write import read_file
+from read_and_write import read_file, write_file
+from messages import change_language
 from utils.data_utils import cast_if_true, change_data_in_file, get_template
 from widgets.data_editor import DataEditor
 from widgets.file_navigator import FileNavigator
@@ -22,39 +24,73 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 common_parser = CommandParser(
     prog="Widget Manager", description="A widget orchestrator.",
     commands_description="Commands to use 🌊"
 )
 
 # widget related
-@common_parser.add_args(  # see if there's better way to do that
-    "-nl", "--literal_off",
-    help=(
-        "When activated, types won't be casted "
-        "and values will be set as str."
-    ),
-    action="store_true"
+# @common_parser.add_args("idiom", choices=["en_US", "pt_BR"])  #NOT IMPLEMENTED YET
+# @common_parser.add_cmd("lang")
+# def change_lang(de: "DataEditor", parsed: argparse.Namespace) -> None:
+#     change_language(parsed.idiom)
+
+@common_parser.add_args(
+    "-t", "--tab", nargs="?", default=-1, help="tab of editor to save",
+    type=int
+)
+@common_parser.add_cmd("save")
+def save_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
+    """Save DataEditor modified data into filename."""
+    try:
+        de: DataEditor = wm.data_editors[parsed.tab]
+    except IndexError:
+        raise ActionError("ERROR: Not that many editors opened.")
+    
+    if de.filename is None:
+        filepath: Path = (wm.file_navigator.path / input("filename: ")).resolve() 
+        de.filename: Path = filepath
+    write_file(de.filename, de.data)
+    logger.info(f"Saved at {de.filename}.")
+
+@common_parser.add_args(
+    "-t", "--tab", nargs="?", default=-1, help="tab of editor to save",
+    type=int
+)
+@common_parser.add_args("filename", type=str)
+@common_parser.add_cmd("saveas")
+def save_as(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
+    """Change DataEditor file to another and save."""
+    try:
+        de: DataEditor = wm.data_editors[parsed.tab]
+    except IndexError:
+        raise ActionError("ERROR: Not that many editors opened.")
+
+    new_filename: str = parsed.filename
+    if de.filename:
+        de.filename = (de.filename.parent / new_filename).resolve()
+    else:
+        de.filename = (wm.file_navigator.path / new_filename).resolve()
+
+    write_file(de.filename, de.data)
+    logger.info(f"Saved at {de.filename}.")
+
+@common_parser.add_args(
+    "-nl", "--literal_off", action="store_true",
+    help="When activated, values will be set as str."
 )
 @common_parser.add_args(
-    "-s", "--set",
-    required=True,
-    nargs="+",
-    help="New values to be set.",
-    type=str
+    "-s", "--set", required=True, nargs="+", type=str,
+    help="New values to be set."
 )
 @common_parser.add_args(
-    "-p", "--path",
-    required=True,
-    help="Path of data to be updated. Ex.: dict_key/0/another_key",
-    type=str
+    "-p", "--path", required=True, type=Path,
+    help="Path of data to be updated. Ex.: dict_key/0/another_key"
 )
 @common_parser.add_args(
-    "-i", "--input_files",
-    required=True,
-    nargs="+",
-    help="Path of files to be changed.",
-    type=str
+    "-i", "--input_files", required=True, nargs="+", type=str,
+    help="Path of files to be changed."
 )
 @common_parser.add_cmd("change")
 def change_value_in_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
@@ -74,10 +110,7 @@ def change_value_in_file(wm: "WidgetManager", parsed: argparse.Namespace) -> Non
     )
 
 @common_parser.add_args(
-    "filepaths",
-    nargs="*",
-    help="Path of files to open.",
-    default=[None]
+    "filepaths", nargs="*", default=[None], help="Path of files to open."
 )
 @common_parser.add_cmd("edit", help_txt="Open a new editor tab of given file")
 def edit_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
@@ -97,11 +130,8 @@ def edit_file(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
     wm.active_widget = wm.data_editors[-1]
 
 @common_parser.add_args(
-    "tab",
-    nargs="?",
-    help="Index of editor tab with data to get template of.",
-    type=int,
-    default=None
+    "tab", nargs="?", type=int, default=None,
+    help="Index of editor tab with data to get template of."
 )
 @common_parser.add_cmd("gt", "get-template")
 def get_template_from_de(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
@@ -127,11 +157,7 @@ def get_template_from_de(wm: "WidgetManager", parsed: argparse.Namespace) -> Non
     wm.active_widget: DataEditor = editor_of_template
 
 @common_parser.add_args(
-    "tab",
-    nargs="?",
-    type=int,
-    help="index of tab to close.",
-    default=None
+    "tab", nargs="?", type=int, default=None, help="index of tab to close."
 )
 @common_parser.add_cmd("close")
 def close_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
@@ -149,8 +175,7 @@ def close_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
     try:
         wm.data_editors.pop(tab_index)
     except IndexError:
-        print("ERROR: Not that many editors opened.")
-        return
+        raise ActionError("ERROR: Not that many editors opened.")
 
     # refocus
     if wm.active_widget not in wm.data_editors:
@@ -160,11 +185,7 @@ def close_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:
             wm.active_widget: FileNavigator = wm.file_navigator
 
 @common_parser.add_args(
-    "tab",
-    nargs="?",
-    type=int,
-    help="index of tab to focus.",
-    default=-1
+    "tab", nargs="?", default=-1, type=int, help="index of tab to focus."
 )
 @common_parser.add_cmd("editor")
 def focus_data_editor(wm: "WidgetManager", parsed: argparse.Namespace) -> None:

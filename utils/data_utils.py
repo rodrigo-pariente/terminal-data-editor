@@ -9,7 +9,7 @@ nested data structures.
 import ast
 from itertools import repeat
 import logging
-from typing import Any
+from typing import Any, Callable
 from pathlib import Path
 
 from messages import error_msg
@@ -17,7 +17,7 @@ from read_and_write import read_file, write_file
 
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+
 
 def smart_cast(value: str) -> Any:
     """Do a intelligent type conversion of given value."""
@@ -49,11 +49,18 @@ def get_data_by_path(data: Any, data_path: Path) -> Any:
             indexes.append(index)
 
     current: Any = data
-    for i in indexes:
+    for index in indexes:
         try:
-            current: Any = current[i]
-        except KeyError as e:
-            raise KeyError(error_msg["InvalidIndex"]) from e
+            current: Any = current[index]
+        except (KeyError, TypeError) as e:
+            # for better error message # this isn't the place
+            if isinstance(index, str):
+                index = f'"{index}"'
+            if isinstance(current, str):
+                current = f'"{current}"'
+
+            message = error_msg["InvalidIndex"].format(index=index, data=current)
+            raise IndexError(message) from e
 
     return current
 
@@ -80,9 +87,26 @@ def change_data_by_path(
         if isinstance(masked_data, dict) and isinstance(last_index, int):
             masked_data[str(last_index)] = new_data
         else:
-            raise KeyError(e) from e
+            raise
 
     return data
+
+def change_data_in_file(
+    filepaths: list[Path],
+    data_path: str,
+    new_values: list[Any],
+) -> None:
+    """change value of given data_path in given file"""
+    if len(filepaths) != len(new_values):
+        if len(new_values) != 1:
+            logger.error(
+                "Give a new_value per file or a single value for every file."
+            )
+            return
+        new_values = repeat(new_values[0])
+
+    for i, filepath in enumerate(filepaths):
+        read_change_write(filepath, data_path, new_values[i])
 
 def get_template(data: Any):
     """Makes template out of given data."""
@@ -105,25 +129,6 @@ def get_template(data: Any):
 
     return data
 
-def change_data_in_file(
-    filepaths: list[Path],
-    data_path: str,
-    new_values: list[Any],
-) -> None:
-    """change value of given data_path in given file"""
-    if len(filepaths) != len(new_values):
-        if len(new_values) != 1:
-            error_message: str = (
-                "ERROR: Give a new_value per file, "
-                "or a single value for every file."
-            )
-            logger.error(error_message)
-            return
-        new_values = repeat(new_values[0])
-
-    for i, filepath in enumerate(filepaths):
-        read_change_write(filepath, data_path, new_values[i])
-
 def read_change_write(
     filepath: Path,
     data_path: Path,
@@ -133,3 +138,29 @@ def read_change_write(
     data: Any = read_file(filepath)
     updated_data: Any = change_data_by_path(data, data_path, new_value)
     write_file(filepath, updated_data)
+
+def iter_data(
+    data: Any,
+    dict_answer: Callable,
+    list_answer: Callable,
+    data_answer: Callable,
+) -> Any:
+
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, (dict, list)):
+                iter_data(value, dict_answer, list_answer, data_answer)
+            else:
+                data[key] = dict_answer(key, value)
+
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            if isinstance(item, (dict, list)):
+                iter_data(item, dict_answer, list_answer, data_answer)
+            else:
+                data[i] = dict_answer(i, item)
+
+    else:
+        data = data_answer(data)
+
+    return data

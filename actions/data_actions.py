@@ -2,17 +2,19 @@
 
 import argparse
 from collections.abc import Callable
+import logging
 from pathlib import Path
 from pprint import pprint
 from typing import Any, TYPE_CHECKING
 
-from parsing.repl_parser import (
-    AttemptToExitError, CommandParser, parse_and_execute
-)
-from read_and_write import read_file, write_file
-from utils.data_utils import smart_cast
+from actions.action_exceptions import ActionError
+from parsing.repl_parser import AttemptToExitError, CommandParser
+from read_and_write import read_file
+from utils.data_utils import smart_cast, iter_data
 from widgets.quick_fill import QuickFill
 
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from widgets.data_editor import DataEditor
@@ -23,121 +25,170 @@ data_editor_parser = CommandParser(
     add_help=False, commands_description="Commands to edit ✍️"
 )
 
-de_parser = data_editor_parser  # enshortened name for using decorators
+de_parser = data_editor_parser  # enshortened name for using decorators # start with _?
 
+@de_parser.add_args("+l", "--literal", dest="literal", action="store_true")
+@de_parser.add_args(
+    "-p", "--path", nargs="?", default=".", type=Path,
+    help="path of value append"
+)
 @de_parser.add_args("new_values", nargs="+")
-@de_parser.add_cmd("append")
+@de_parser.add_cmd("append", prefix_chars="-+")
 def append_data(de: "DataEditor", parsed: argparse.Namespace) -> None:
-    """Append data in current path without rewriting all data to maintain."""
+    """
+    Append data.
+    """
     for value in parsed.new_values:
-        new_data = smart_cast(value)
-        cur_data = de.get_data("current")
+        try:
+            sel_data: Any = de.get_data(parsed.path)
+        except IndexError as e:
+            raise ActionError(e)
 
-        match (new_data, cur_data):
+        new_data: Any = smart_cast(value)
+
+        match (new_data, sel_data):
             case (dict(), dict()):
-                cur_data.update(new_data)
+                sel_data.update(new_data)
 
             case (list(), list()):
-                cur_data.extend(new_data)
-
-            # improve
-            case (a,b) if all(isinstance(d, (int, str, float)) for d in (a,b)):
-                if isinstance(cur_data, str) or isinstance(new_data, str):
-                    cur_data: str = str(cur_data)
-                    new_data: str = str(new_data)
-                de.change_data(f"{cur_data + new_data}", "current")
+                sel_data.extend(new_data)
 
             case _:
-                print(f"Could not append {new_data}.")
+                appended: Any
+                try:
+                    appended = sel_data + new_data
+                except TypeError:
+                    if not parsed.literal:
+                        raise ActionError(f"Could not append {new_data}.")
+                    appended = "".join(map(str, (sel_data, new_data)))
+
+                de.change_data(appended, parsed.path)
 
 @de_parser.add_args(
-    "data_path",
-    nargs="?",
-    help="path of data to cast.",
-    default="."
+    "path", nargs="?", default=".", type=Path,
+    help="path of data to cast."
 )
 @de_parser.add_cmd("cast")
 def cast_value(de: "DataEditor", parsed: argparse.Namespace) -> None:
     """Smart cast data in given path."""
-    path: str = "current" if parsed.data_path == "." else Path(parsed.data_path)
-    data: Any = de.get_data(path)
-    de.change_data(smart_cast(data), path, force_type=True)
+    data: Any = de.get_data(parsed.path)
+    de.change_data(str(data), parsed.path, force_type=True)
 
+@de_parser.add_args(
+    "path", nargs="?", default=Path("."), type=Path,
+    help="path of data to uncast."
+)
+@de_parser.add_cmd("uncast")
+def uncast_value(de: "DataEditor", parsed: argparse.Namespace) -> None:
+    """Cast data in given path as str."""
+    data: Any = de.get_data(parsed.path)
+    de.change_data(str(data), parsed.path, force_type=True)
+
+@de_parser.add_args(
+    "-p", "--path", nargs="?", default=Path("."), type=Path,
+    help="path of key to delete"
+)
 @de_parser.add_args("indexes", nargs="+")
 @de_parser.add_cmd("del-key")
 def del_key(de: "DataEditor", parsed: argparse.Namespace) -> None:
     """Delete data based on given index."""
-    indexes: list[str] = parsed.indexes
-    cur_data: Any = de.get_data("current")
-    for i in indexes:
-        if isinstance(cur_data, (dict, list)):
+    sel_data: Any = de.get_data(parsed.path)
+    for index in parsed.indexes:
+        if isinstance(sel_data, (dict, list)):
+            if de.literal and index.isdigit():
+                index = int(index)
             try:
-                cur_data.pop(i)
+                sel_data.pop(index)
             except (KeyError, IndexError):
-                print("ERROR: No value of index {i} in data.")
+                print("ERROR: No value of index {index} in data.")
         else:
             print("ERROR: Can only del-key from dictionary or list only.")
 
-@de_parser.add_args("values", nargs="+")
+# REMOVE TYPE?
+@de_parser.add_args(
+    "-r", "--recursively", action="store_true", help="delete recursively."
+)
+@de_parser.add_args(
+    "-p", "--path", nargs="?", default=".", type=Path,
+    help="path of value to delete"
+)
+@de_parser.add_args(metavar="values", nargs="+", dest="values_to_delete")
 @de_parser.add_cmd("del-val")  # deleting only the last (?)
 def del_val(de: "DataEditor", parsed: argparse.Namespace) -> None:
     """Delete value, key or item based on given value."""    
-    values: list[str] = parsed.values
-    cur_data: Any = de.get_data("current")
-    new_value: Any
-    for i in values:
-        if de.literal:
-            i: Any = smart_cast(i)
+    def _iter_del(data, delete):
+        if data == delete:
+            return None
 
-        if i == ".":
+        if isinstance(data, list):
+            return [_iter_del(i, delete) for i in data if i != delete]
+
+        elif isinstance(data, dict):
+            return {
+                k: _iter_del(v, delete) for k, v in data.items()
+                if v != delete
+            }
+
+        return data
+
+    for to_delete in parsed.values_to_delete:
+        try:
+            data: Any = de.get_data(parsed.path)
+        except IndexError as e:
+            logger.error(e)
+            return
+
+        # necessary for trying to delete non-str values
+        if de.literal:
+            to_delete: Any = smart_cast(to_delete)
+
+        new_value: Any
+        if parsed.recursively:
+            new_value = _iter_del(data, to_delete)
+            de.change_data(new_value, parsed.path, force_type=True)
+            return
+
+        if to_delete == ".":
             new_value = None
-        elif isinstance(cur_data, dict):
-            new_value: dict[str, Any] = {}
-            new_value |= {k: v for k, v in cur_data.items() if v != i}
-        elif isinstance(cur_data, list):
-            new_value: list[Any] = cur_data.remove(i)
+        elif isinstance(data, dict):
+            new_value = {k: v for k, v in data.items() if v != to_delete}
+        elif isinstance(data, list):
+            new_value = [i for i in data if i != to_delete]
         else:
-            print(f"ERROR: Could not delete {i}.")
+            logger.error(f"Could not delete {to_delete}.")
             continue
 
-        de.change_data(new_value, "current", force_type=True)
+        de.change_data(new_value, parsed.path, force_type=True)
 
-@de_parser.add_cmd("ls", "list")  # improve?
-def list_data(de: "DataEditor", *_) -> None:
-    """Print data in current working data path."""
-    pprint(de.get_data("current"))
+@de_parser.add_args("path", nargs="?", default=Path("."), type=Path)
+@de_parser.add_cmd("ls", "list")  
+def list_data(de: "DataEditor", parsed: argparse.Namespace) -> None:
+    """Print data in given data path."""
+    pprint(de.get_data(parsed.path))
 
-@de_parser.add_args("indexes", nargs="*", default=["."])
+@de_parser.add_args("path", nargs="?", default=Path("."), type=Path)
 @de_parser.add_cmd("cd")
-def move(de: "DataEditor", parsed: argparse.Namespace)-> None:
-    """Move path based on given indexes."""
-    def is_index(index: str, data: dict | list) -> bool:
-        if isinstance(data, dict):
-            return index in data
-        if isinstance(data, list):
-            return index.isdigit() and int(index) in range(len(data))
-        return False
-
-    indexes: list[str] = parsed.indexes
-    for i in Path(*indexes).parts:
-        if i == "..":
-            if de.path.as_posix() != ".":
-                de.path = de.path.parent
-            else:
-                print("ERROR: You are at root level.")
-        elif i == "\\":
-            de.path = Path(".")
-        elif is_index(i, de.get_data("current")):
-            de.path = de.path.joinpath(i)
-        else:
-            print("ERROR: Cannot navigate into this type.")
-
-    pprint(de.get_data("current"))
+def change_editor_path(de: "DataEditor", parsed: argparse.Namespace)-> None:
+    """Move path."""
+    de.path = de.resolve_path(parsed.path)
 
 @de_parser.add_cmd("qf", "quick-fill")
 def quick_fill(de: "DataEditor", *_) -> None:
     """Editing mode for quick filling dict values and list items."""
-    QuickFill(de.data).run()
+    def _data_answer(data):
+        print(f"data: {data}")
+        return smart_cast(input("new value: "))
+    
+    def _list_answer(i, item):
+        print(f"i: {i}, item: {item}")
+        return smart_cast(input("item: "))
+
+    def _dict_answer(key, value):
+        print(f"{key}: {value}")
+        return smart_cast(input(f"{key}: "))
+
+    de.data: Any
+    de.data = iter_data(de.data, _dict_answer, _list_answer, _data_answer)
 
 @de_parser.add_args("variables", nargs="*")
 @de_parser.add_cmd("print")
@@ -164,27 +215,6 @@ def restart(de: "DataEditor", *_) -> None:
         de.data: Any = read_file(de.filename)
     else:
         print("ERROR: No file is opened.")
-    pprint(de.get_data("current"))
-
-@de_parser.add_cmd("save")
-def save_file(de: "DataEditor", *_) -> None:
-    """Save DataEditor modified data into filename."""
-    if de.filename is None:
-        de.filename: Path = Path(input("filename: "))
-    write_file(de.filename, de.data)
-    print(f"Saved at {de.filename}.")
-
-@de_parser.add_args("filename", type=str)
-@de_parser.add_cmd("saveas")
-def save_as(de: "DataEditor", parsed: argparse.Namespace) -> None:
-    """Change DataEditor file to another and save."""
-    new_filename: str = parsed.filename
-    if de.filename:
-        de.filename = (de.filename.parent / new_filename).resolve()
-    else:
-        de.filename = (Path.cwd() / new_filename).resolve()
-    write_file(de.filename, de.data)
-    print(f"Saved at {de.filename}.")
 
 @de_parser.add_args("mode", choices=["on", "off"])
 @de_parser.add_cmd("literal")
@@ -192,42 +222,15 @@ def set_literal(de: "DataEditor", parsed: argparse.Namespace) -> None:
     """Set DataEditor flag on or off."""
     de.literal: bool = bool(parsed.mode == "on")
 
+@de_parser.add_args("+l", "--literal", dest="literal", action="store_true")
+@de_parser.add_args("-p", "--path", default=Path("."), type=Path)
 @de_parser.add_args("new_value", nargs="+")
-@de_parser.add_cmd("set")
+@de_parser.add_cmd("set", prefix_chars="-+")
 def set_value(de: "DataEditor", parsed: argparse.Namespace) -> None:
-    """Set new value in current path data."""
-    de.change_data(" ".join(parsed.new_value), "current")
+    """Set new value."""
+    new_value: Any
+    new_value = " ".join(parsed.new_value)
+    if parsed.literal:
+        new_value = smart_cast(" ".join(parsed.new_value))
 
-@de_parser.add_args("args", nargs="+")
-@de_parser.add_args("command", type=str)
-@de_parser.add_cmd("+l")
-def temporary_literal(de: "DataEditor", parsed: argparse.Namespace) -> None:
-    """Quick execution of command with literal on."""
-    args: list[str] = parsed.args
-    command: str = parsed.command
-    if command in de.parser.commands.choices:
-        tmp_literal: bool = de.literal
-        try:
-            # set literal on
-            parse_and_execute(de, "literal on")
-            
-            # parse and execute the user command
-            try:
-                parse_and_execute(de, " ".join([command, *args]))
-            except AttemptToExitError:
-                return
-        finally:
-            de.literal = tmp_literal
-
-@de_parser.add_args(
-    "data_path",
-    nargs="?",
-    help="path of data to uncast.",
-    default="."
-)
-@de_parser.add_cmd("uncast")
-def uncast_value(de: "DataEditor", parsed: argparse.Namespace) -> None:
-    """Cast data in given path as str."""
-    path: str = "current" if parsed.data_path == "." else Path(parsed.data_path)
-    data: Any = de.get_data(path)
-    de.change_data(str(data), path, force_type=True)
+    de.change_data(new_value, parsed.path, force_type=parsed.literal)

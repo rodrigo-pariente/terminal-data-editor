@@ -1,28 +1,22 @@
-""" Custom lexer method. """
+""" Custom parsing methods. """
 
-import re
 import shlex
 from typing import Any
 
 from parsing.safe_functions import SAFE_FUNCTIONS
 
 
-def lexer(usr_input: str) -> list[str]:
+def lexer(line: str, boxes: dict | None = None) -> list[str]:
     """
-    Custom lexer/pre-parser for proper tokenizing Python data types, 
-    shell filenames with spaces, and execution of Python expressions
-    from within the REPL with the $python_command$ notation.
-
-    Example of parsing:
-
-    - `command_parser("change -i 'file name.txt' -p age -s $str(10 + 2**3)$")`
-      ['change', '-i', 'file name.txt', '-p', 'age', '-s', '18']
+    Custom lexer for proper tokenizing Python data types,
+    shell filenames with spaces.
     """
-    tokens: list[str] = shlex.split(usr_input, posix=False)
+    tokens: list[str] = shlex.split(line, posix=False)
 
-    boxes: dict[str, str] = {"(": ")", "{": "}", "[": "]", "$": "$"}
+    if boxes is None:
+        boxes: dict[str, str] = {"(": ")", "{": "}", "[": "]"}
 
-    parsed: list[str] = []
+    lexed: list[str] = []
     buffer: list[str] = []
     stack: list[str] = []
     for token in tokens:
@@ -31,22 +25,49 @@ def lexer(usr_input: str) -> list[str]:
             if token.endswith(boxes[stack[-1]]):
                 stack.pop()
                 if not stack:
-                    parsed.append(" ".join(buffer))
+                    lexed.append(" ".join(buffer))
                     buffer.clear()
         else:
             if token[0] in boxes and not token.endswith(boxes[token[0]]):
                 stack.append(token[0])
                 buffer.append(token)
             else:
-                parsed.append(token)
+                lexed.append(token)
     if buffer:
-        parsed.append(" ".join(buffer))
+        lexed.append(" ".join(buffer))
 
-    parsed = [x.strip('\'"') for x in parsed]
+    return lexed
+
+def pre_parser(line: str, magick: bool = True) -> list[str]:
+    """
+    pre-parser for evaluating and execution of Python expressions 
+    from within the REPL with the $python_command$ notation.
+
+    Example of parsing:
+
+    - `pre_parser("change -i 'file name.txt' -p age -s $str(10 + 2**3)$")`
+      ['change', '-i', 'file name.txt', '-p', 'age', '-s', '18']
+    """
+    boxes: dict[str, str] = {"(": ")", "{": "}", "[": "]"}
+
+    if magick:
+        boxes.update({"$": "$"})
+        # boxes.update({"\"": "\"", "'": "'"})
+    lexed: list[str] = lexer(line, boxes)
+
+    # parsed = [x if x.strip('\'"').isdigit() else x.strip('\'"') for x in lexed]
+    # parsed = lexed
+    parsed: list[str] = [x.strip("\"'") for x in lexed]
 
     # magick: evaluate python expressions in between $
+    if not magick:
+        return parsed
+
     parsed_magick = []
     for token in parsed:
+        if not isinstance(token, str):
+            continue
+
         if token.startswith("$*") and token.endswith("$"):
             tokens: Any = eval(token[2:-1])
             parsed_magick.extend(tokens)
@@ -54,6 +75,6 @@ def lexer(usr_input: str) -> list[str]:
 
         if token.startswith("$") and token.endswith("$"):
             token: Any = eval(token.strip("$")) 
-        parsed_magick.append(token)
+        parsed_magick.append(str(token))
 
     return parsed_magick

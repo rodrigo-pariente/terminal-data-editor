@@ -3,10 +3,11 @@
 # make resolve use consistent
 import argparse
 from collections.abc import Callable
+import logging
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
-from messages import perror
+from messages import get_error_message 
 from utils.shell_utils import (
     copy_anything, delete_anything, move_anything, create_file,
     create_directory
@@ -15,6 +16,8 @@ from utils.data_utils import get_template
 from read_and_write import read_file, write_file
 from parsing.repl_parser import CommandParser
 
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from widgets.file_navigator import FileNavigator
@@ -92,7 +95,9 @@ def list_files(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
         elif filepath.is_file():
             print(filepath.name)  # to-do: make it prettier
         else:
-            perror("DirectoryOrFileNotFound", filename=filepath)
+            logger.error(
+                get_error_message("DirectoryOrFileNotFound", filename=filepath)
+            )
 
 @fn_parser.add_args("filepaths", nargs="+")
 @fn_parser.add_cmd("mk", "make")
@@ -133,7 +138,7 @@ def change_dir(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
     if potential_path.is_dir():
         fn.path = potential_path
     else:
-        perror("DirectoryNotFound", dirname=potential_path)
+        logger.error(get_error_message("DirectoryNotFound", dirname=potential_path))
 
 @fn_parser.add_cmd("pwd")
 def show_current_directory(fn: "FileNavigator", *_) -> None:

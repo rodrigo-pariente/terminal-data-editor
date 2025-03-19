@@ -1,0 +1,11 @@
+{
+  "DirectoryAlreadyExists": "Directory \"{dirname}\" already exists.",
+  "DestinationMustBeDirectory": "Destination \"{dirname}\" must be a directory.",
+  "DirectoryNotFound": "Could not directory \"{dirname}\".",
+  "DirectoryOrFileNotFound": "Could not find file/directory \"{filename}\".",
+  "FileAlreadyExists": "File {filename} already exists.",
+  "PermissionDenied": "Permission denied. Try running this application with administrator privilages.",
+  "UnsupportedFormat": "{format} format is unsupported. Supported formats: {supported}",
+  "FileNotFound": "{filename} not found.",
+  "InvalidIndex": "Index {index} in the given path does not exist in {data}."
+}

@@ -7,6 +7,7 @@ Add support for more file formats here.
 from collections.abc import Callable
 import io
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -14,10 +15,13 @@ from typing import Any
 import toml
 import yaml
 
-from messages import perror
+from messages import get_error_message
 
+
+logger = logging.getLogger(__name__)
 
 SUPPORTED_FORMATS: tuple[str, ...] = (".json", ".toml",".yaml")
+
 
 read_functions: dict[str, Callable] = {}
 write_functions: dict[str, Callable] = {}
@@ -45,19 +49,21 @@ def read_file(filepath: str | Path) -> Any:
         ext = "FORMAT_WITHOUT_EXTENSION"
 
     if ext not in SUPPORTED_FORMATS:
-        perror(
+        logger.error(get_error_message(
             "UnsupportedFormat",
             format=ext,
             supported=str(SUPPORTED_FORMATS)
-        )
+        ))
         return None
 
     try:
         return read_functions[ext](filepath)
     except FileNotFoundError:
-        perror("FileNotFound", filepath=filepath)
+        logger.error(get_error_message("FileNotFound", filepath=filepath))
+        raise
     except PermissionError:
-        perror("PermissionError")
+        logger.error(get_error_message("PermissionError"))
+        raise
     return None
 
 def write_file(filepath: str | Path, content: Any) -> None:
@@ -65,17 +71,18 @@ def write_file(filepath: str | Path, content: Any) -> None:
     ext = os.path.splitext(filepath)[1].lower()
 
     if ext not in SUPPORTED_FORMATS:
-        perror(
-            "UnsupportedFormats",
+        logger.error(get_error_message(
+            "UnsupportedFormat",
             format=ext,
-            supported=SUPPORTED_FORMATS
-        )
+            supported=str(SUPPORTED_FORMATS)
+        ))
         return
 
     try:
         write_functions[ext](filepath, content)
     except PermissionError:
-        perror("PermissionError")
+        logger.error(get_error_message("PermissionError"))
+        raise
 
 @add_func_to_read(".json")
 def read_json(json_filepath: str | Path) -> Any:

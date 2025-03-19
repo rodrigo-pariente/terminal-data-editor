@@ -5,10 +5,9 @@ import logging
 import sys
 from typing import Callable, Self, TYPE_CHECKING
 
-from parsing.lexer import lexer
-
 
 logger = logging.getLogger(__name__)
+
 
 class AttemptToExitError(Exception):
     """Error to be raised whenever argparse try to exit the program."""
@@ -126,18 +125,25 @@ class CommandParser(argparse.ArgumentParser):
         command_parser.set_defaults(func=action)
         return command_parser
 
-    def parse_args(self, args=None, namespace=None) -> argparse.Namespace:
+    def parse_args(
+        self,
+        args: list[str] = None,
+        namespace: argparse.Namespace = None,
+        suppress_argument_error: bool = True
+    ) -> argparse.Namespace:
         """
         Parse given args.
         Raises a uniform exception whenever the parser attempts to exit.
         """
         try:
             return super().parse_args(args, namespace)
-
+        
         except argparse.ArgumentError as e:
-            logger.error(e)
-            raise AttemptToExitError
-
+            if suppress_argument_error:
+                logger.error(e)
+                raise AttemptToExitError
+            raise
+        # maybe let AttemptToExitError have message and only display them higher.
         except SystemExit:  # because action= "help" exits on force
             raise AttemptToExitError
 
@@ -178,24 +184,12 @@ class CommandParser(argparse.ArgumentParser):
     def add_args(*args, **kwargs) -> Callable:
         """Decorator for adding arguments to the newly made command."""
         def wrapper(command_parser: Self) -> Self:
+
+            # # set default type of new arguments as smart_cast function
+            # if "action" not in kwargs and "type" not in kwargs:
+            #     kwargs["type"]: Callable = lambda x: int(x) if x.isdigit() else x
+
             command_parser.add_argument(*args, **kwargs)
+
             return command_parser
         return wrapper
-
-
-def parse_and_execute(
-    widget,
-    line: str,
-    suppress_attempt_to_exit: bool = False
-) -> None:
-    """Parse line and execute its action."""
-    try:
-        parsed: argparse.Namespace = widget.parser.parse_args(lexer(line))
-    except AttemptToExitError as e:
-        if suppress_attempt_to_exit:
-            return
-        raise AttemptToExitError from e
-
-    func: Callable = getattr(parsed, "func", None)
-    if func:
-        func(widget, parsed)

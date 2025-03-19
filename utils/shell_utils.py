@@ -1,15 +1,22 @@
 """Module for some high-level Shell Utilities used in this project."""
 
+import logging
 from pathlib import Path
 import os
 import shutil
-from messages import perror
+
+from messages import get_error_message
+
+
+logger = logging.getLogger(__name__)
 
 
 def copy_anything(source: Path, destination: Path) -> None:
     """Copy anything, file or folder into given directory."""
     if not destination.parent.is_dir():
-        perror("DestinationMustBeDirectory", dirname=str(destination))
+        logger.error(
+            get_error_message("DestinationMustBeDirectory", dirname=str(destination))
+        )
         create_directories_interface(destination)
         if not destination.is_dir():
             print("Could not copy.")
@@ -20,16 +27,18 @@ def copy_anything(source: Path, destination: Path) -> None:
     elif source.is_file():
         shutil.copy2(source, destination)
     else:
-        perror("DirectoryOrFileNotFound", filename=source.name)
+        logger.error(
+            get_error_message("DirectoryOrFileNotFound", filename=source.name)
+        )
 
 def create_directory(directory: Path) -> None:
     """Create directory in given path."""
     try:
         directory.mkdir(parents=True)
     except FileExistsError:
-        perror("DirectoryAlreadyExists", dirname=str(directory))
+        logger.error(get_error_message("DirectoryAlreadyExists", dirname=str(directory)))
     except PermissionError:
-        perror("PermissionError")
+        logger.error(get_error_message("PermissionError"))
 
 def create_directories_interface(directory: Path | list[Path]) -> None:
     """
@@ -47,11 +56,11 @@ def create_file(file: Path) -> None:
     try:
         file.touch(exist_ok=False)
     except FileExistsError:
-        perror("FileAlreadyExists", filename=file.name)
+        logger.error(get_error_message("FileAlreadyExists", filename=file.name))
     except FileNotFoundError:
-        perror("DirectoryNotFound", dirname=file.parent)
+        logger.error(get_error_message("DirectoryNotFound", dirname=file.parent))
     except PermissionError:
-        perror("PermissionError")
+        logger.error(get_error_message("PermissionError"))
 
 def delete_anything(file: Path) -> None:
     """Delete anything, file or folder that is passed."""
@@ -61,9 +70,9 @@ def delete_anything(file: Path) -> None:
         else:
             os.remove(file)
     except FileNotFoundError:
-        perror("DirectoryOrFileNotFound", filename=str(file))
+        logger.error(get_error_message("DirectoryOrFileNotFound", filename=str(file)))
     except PermissionError:
-        perror("PermissionError")
+        logger.error(get_error_message("PermissionError"))
 
 def move_anything(source: Path, destination: Path) -> Path:
     """Move anything, file or directory from source into given destination."""
@@ -75,12 +84,12 @@ def move_anything(source: Path, destination: Path) -> Path:
     try:
         source.rename(new_path)
     except FileNotFoundError:
-        perror("DirectoryNotFound", dirname=destination)
+        logger.error(get_error_message("DirectoryNotFound", dirname=destination))
         create_directories_interface(destination)
         if new_path.parent.is_dir():
             move_anything(source, destination)
         else:
             print("Couldn't move.")
     except PermissionError:
-        perror("PermissionError")
+        logger.error(get_error_message("PermissionError"))
     return new_path
