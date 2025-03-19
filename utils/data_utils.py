@@ -147,20 +147,19 @@ def iter_data(
 ) -> Any:
 
     if isinstance(data, dict):
-        for key, value in data.items():
-            if isinstance(value, (dict, list)):
-                iter_data(value, dict_answer, list_answer, data_answer)
-            else:
-                data[key] = dict_answer(key, value)
+        return {
+            k: iter_data(v, dict_answer, list_answer, data_answer)
+            if isinstance(v, (list, dict))
+            else dict_answer(k, v)
+            for k, v in data.items()
+        }
 
-    elif isinstance(data, list):
-        for i, item in enumerate(data):
-            if isinstance(item, (dict, list)):
-                iter_data(item, dict_answer, list_answer, data_answer)
-            else:
-                data[i] = dict_answer(i, item)
+    if isinstance(data, list):
+        return [
+            iter_data(i, dict_answer, list_answer, data_answer)
+            if isinstance(i, (dict, list))
+            else list_answer(i, item)
+            for i, item in enumerate(data)
+        ]
 
-    else:
-        data = data_answer(data)
-
-    return data
+    return data_answer(data)

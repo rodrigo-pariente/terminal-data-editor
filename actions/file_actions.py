@@ -37,28 +37,32 @@ def resolve_paths(main_path: Path, relatives: list[str]) -> tuple[Path, ...]:
 @fn_parser.add_args("destinations", nargs="+")
 @fn_parser.add_args("source", type=str)
 @fn_parser.add_cmd("copy", "cp")
-def copy_files(fn: "FileNavigator", parsed: argparse.Namespace) -> None: # add filters
+def copy_files(
+    fn: "FileNavigator",
+    source: str,
+    destinations: list[str]
+) -> None: # add filters
     """Copy file from source into given destinations."""
     destinations: tuple[Path, ...]
-    destinations = resolve_paths(fn.path, parsed.destinations)
-    source: Path = resolve_paths(fn.path, [parsed.source])[0]
+    destinations = resolve_paths(fn.path, destinations)
+    source: Path = resolve_paths(fn.path, [source])[0]
 
     for destination in destinations:
         copy_anything(source, destination)
 
 @fn_parser.add_args("directories", nargs="+")
 @fn_parser.add_cmd("mkdir")
-def create_directories(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
+def create_directories(fn: "FileNavigator", directories: list[str]) -> None:
     """Create empty directories in given directory."""
-    directories: tuple[Path, ...] = resolve_paths(fn.path, parsed.directories)
+    directories: tuple[Path, ...] = resolve_paths(fn.path, directories)
     for directory in directories:
         create_directory(directory)
 
 @fn_parser.add_args("filepaths", nargs="+")
 @fn_parser.add_cmd("del", "rm")
-def delete_files(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
+def delete_files(fn: "FileNavigator", filepaths: list[str]) -> None:
     """Delete file or folder from current or given directory."""
-    filepaths: tuple[Path, ...] = resolve_paths(fn.path, parsed.filepaths)
+    filepaths: tuple[Path, ...] = resolve_paths(fn.path, filepaths)
     for filepath in filepaths:
         delete_anything(filepath)
 
@@ -67,11 +71,12 @@ def delete_files(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
 @fn_parser.add_cmd("xt", "extract-template")
 def extract_template_from_file(
     fn: "FileNavigator",
-    parsed: argparse.Namespace
+    filepath: str,
+    template_path: str,
 ) -> None:
     """Extract template of data from given file into a new template_file"""
-    abs_filepath: Path = (fn.path / parsed.filepath).resolve()
-    template_filepath: Path = Path(fn.path / parsed.template_path).resolve()
+    abs_filepath: Path = (fn.path / filepath).resolve()
+    template_filepath: Path = Path(fn.path / template_path).resolve()
 
     data: Any = read_file(abs_filepath)
     template: Any = get_template(data)
@@ -80,9 +85,9 @@ def extract_template_from_file(
 
 @fn_parser.add_args("filepaths", nargs="*", default=["."])
 @fn_parser.add_cmd("list", "ls")
-def list_files(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
+def list_files(fn: "FileNavigator",  filepaths: list[str]) -> None:
     """List directory files. Can list multiple directories at once."""
-    targets: list[str] = parsed.filepaths
+    targets: list[str] = filepaths
 
     filepaths: list[str]
     filepaths = [target if target != "." else fn.path for target in targets]
@@ -101,23 +106,27 @@ def list_files(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
 
 @fn_parser.add_args("filepaths", nargs="+")
 @fn_parser.add_cmd("mk", "make")
-def make_files(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
+def make_files(fn: "FileNavigator",  filepaths: list[str]) -> None:
     """Create blank files in given directory."""
-    abs_filepaths: tuple[Path, ...] = resolve_paths(fn.path, parsed.filepaths)
+    abs_filepaths: tuple[Path, ...] = resolve_paths(fn.path, filepaths)
     for filepath in abs_filepaths:
         create_file(filepath)
 
 @fn_parser.add_args("destinations", nargs="+")
 @fn_parser.add_args("source", type=str)
-@fn_parser.add_cmd("mv", "move")
-def move_file(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
+@fn_parser.add_cmd("move", "mv")
+def move_file(
+    fn: "FileNavigator",
+    source: str,
+    destinations: list[str]
+) -> None:
     """
     Move file from source to first destination.
     If more destinations passed, moved file now is COPIED to those places
     """
     destinations: tuple[Path, ...]
-    destinations = resolve_paths(fn.path, parsed.destinations)
-    source: Path = resolve_paths(fn.path, [parsed.source])[0]
+    destinations = resolve_paths(fn.path, destinations)
+    source: Path = resolve_paths(fn.path, [source])[0]
 
     new_source_path: Path = move_anything(source, destinations[0])
 
@@ -127,20 +136,20 @@ def move_file(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
 
 @fn_parser.add_args("directory", nargs="?", type=str, default=".")
 @fn_parser.add_cmd("cd")
-def change_dir(fn: "FileNavigator", parsed: argparse.Namespace) -> None:
+def change_dir(fn: "FileNavigator",  directory: str) -> None:
     """Move from the current directory.""" 
 
-    if parsed.directory == "..":
+    if directory == "..":
         fn.path = fn.path.parent
         return
 
-    potential_path: Path = (fn.path / parsed.directory).resolve()
+    potential_path: Path = (fn.path / directory).resolve()
     if potential_path.is_dir():
         fn.path = potential_path
     else:
         logger.error(get_error_message("DirectoryNotFound", dirname=potential_path))
 
 @fn_parser.add_cmd("pwd")
-def show_current_directory(fn: "FileNavigator", *_) -> None:
+def show_current_directory(fn: "FileNavigator") -> None:
     """Shows current working directory."""
     print(f"path: {fn.path}")

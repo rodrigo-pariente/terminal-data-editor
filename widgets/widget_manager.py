@@ -84,6 +84,6 @@ class WidgetManager:
             if action:
                 try:
                     kwargs: dict = vars(parsed)
-                    action(widget, parsed)  # make it receive kwargs
+                    action(widget, **kwargs)
                 except ActionError as e:
                     logger.error(e)
