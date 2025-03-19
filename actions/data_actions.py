@@ -85,26 +85,41 @@ def uncast_value(de: "DataEditor", parsed: argparse.Namespace) -> None:
     de.change_data(str(data), parsed.path, force_type=True)
 
 @de_parser.add_args(
-    "-p", "--path", nargs="?", default=Path("."), type=Path,
-    help="path of key to delete"
+    "-r", "--recursively", action="store_true", help="delete recursively."
 )
-@de_parser.add_args("indexes", nargs="+")
+@de_parser.add_args(
+    "-p", "--path", nargs="?", default=".", type=Path,
+    help="path of value to delete"
+)
+@de_parser.add_args(metavar="values", nargs="+", dest="keys_to_delete")
 @de_parser.add_cmd("del-key")
 def del_key(de: "DataEditor", parsed: argparse.Namespace) -> None:
-    """Delete data based on given index."""
-    sel_data: Any = de.get_data(parsed.path)
-    for index in parsed.indexes:
-        if isinstance(sel_data, (dict, list)):
-            if de.literal and index.isdigit():
-                index = int(index)
-            try:
-                sel_data.pop(index)
-            except (KeyError, IndexError):
-                print("ERROR: No value of index {index} in data.")
-        else:
-            print("ERROR: Can only del-key from dictionary or list only.")
+    """Delete value, key or item based on given key."""    
+    def _iter_del(data, keys_to_delete, recursively):
+        if isinstance(data, list):
+            return [
+                _iter_del(v, keys_to_delete, recursively) if recursively
+                else v for i, v in enumerate(data) if i not in keys_to_delete
+            ]
 
-# REMOVE TYPE?
+        elif isinstance(data, dict):
+            return {
+                k: _iter_del(v, keys_to_delete, recursively) if recursively
+                else v for k, v in data.items() if k not in keys_to_delete
+            }
+
+        return data
+
+    data: Any = de.get_data(parsed.path)
+
+    keys_to_delete: tuple[Any, ...] = tuple(
+        smart_cast(value) if de.literal else value
+        for value in parsed.keys_to_delete
+    )
+
+    new_value: Any = _iter_del(data, keys_to_delete, parsed.recursively)
+    de.change_data(new_value, parsed.path, force_type=True)
+
 @de_parser.add_args(
     "-r", "--recursively", action="store_true", help="delete recursively."
 )
@@ -113,52 +128,36 @@ def del_key(de: "DataEditor", parsed: argparse.Namespace) -> None:
     help="path of value to delete"
 )
 @de_parser.add_args(metavar="values", nargs="+", dest="values_to_delete")
-@de_parser.add_cmd("del-val")  # deleting only the last (?)
+@de_parser.add_cmd("del-val")
 def del_val(de: "DataEditor", parsed: argparse.Namespace) -> None:
     """Delete value, key or item based on given value."""    
-    def _iter_del(data, delete):
-        if data == delete:
+    def _iter_del(data, values_to_delete, recursively):
+        if data in values_to_delete:
             return None
 
         if isinstance(data, list):
-            return [_iter_del(i, delete) for i in data if i != delete]
+            return [
+                _iter_del(i, values_to_delete, recursively) if recursively
+                else i for i in data if i not in values_to_delete
+            ]
 
         elif isinstance(data, dict):
             return {
-                k: _iter_del(v, delete) for k, v in data.items()
-                if v != delete
+                k: _iter_del(v, values_to_delete, recursively) if recursively
+                else v for k, v in data.items() if v not in values_to_delete
             }
 
         return data
 
-    for to_delete in parsed.values_to_delete:
-        try:
-            data: Any = de.get_data(parsed.path)
-        except IndexError as e:
-            logger.error(e)
-            return
+    data: Any = de.get_data(parsed.path)
 
-        # necessary for trying to delete non-str values
-        if de.literal:
-            to_delete: Any = smart_cast(to_delete)
+    values_to_delete: tuple[Any, ...] = tuple(
+        smart_cast(value) if de.literal else value
+        for value in parsed.values_to_delete
+    )
 
-        new_value: Any
-        if parsed.recursively:
-            new_value = _iter_del(data, to_delete)
-            de.change_data(new_value, parsed.path, force_type=True)
-            return
-
-        if to_delete == ".":
-            new_value = None
-        elif isinstance(data, dict):
-            new_value = {k: v for k, v in data.items() if v != to_delete}
-        elif isinstance(data, list):
-            new_value = [i for i in data if i != to_delete]
-        else:
-            logger.error(f"Could not delete {to_delete}.")
-            continue
-
-        de.change_data(new_value, parsed.path, force_type=True)
+    new_value: Any = _iter_del(data, values_to_delete, parsed.recursively)
+    de.change_data(new_value, parsed.path, force_type=True)
 
 @de_parser.add_args("path", nargs="?", default=Path("."), type=Path)
 @de_parser.add_cmd("ls", "list")  
