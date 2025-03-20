@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import shutil
 
-from messages import get_error_message
+from messages.messages import get_error_message
 
 
 logger = logging.getLogger(__name__)

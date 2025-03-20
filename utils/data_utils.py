@@ -12,7 +12,7 @@ import logging
 from typing import Any, Callable
 from pathlib import Path
 
-from messages import error_msg
+from messages.messages import error_msg
 from read_and_write import read_file, write_file
 
 

@@ -1,9 +1,10 @@
 """ Custom parsing methods. """
 
+from collections.abc import Iterable
 import shlex
 from typing import Any
 
-from parsing.safe_functions import SAFE_FUNCTIONS
+from parsing.safe_functions import safe_evaluation
 
 
 def lexer(line: str, boxes: dict | None = None) -> list[str]:
@@ -28,11 +29,13 @@ def lexer(line: str, boxes: dict | None = None) -> list[str]:
                     lexed.append(" ".join(buffer))
                     buffer.clear()
         else:
-            if token[0] in boxes and not token.endswith(boxes[token[0]]):
-                stack.append(token[0])
-                buffer.append(token)
-            else:
-                lexed.append(token)
+            if token[0] in boxes:
+                if len(token) == 1 or not token.endswith(boxes[token[0]]):
+                    stack.append(token[0])
+                    buffer.append(token)
+                    continue
+            lexed.append(token)
+
     if buffer:
         lexed.append(" ".join(buffer))
 
@@ -41,7 +44,7 @@ def lexer(line: str, boxes: dict | None = None) -> list[str]:
 def pre_parser(line: str, magick: bool = True) -> list[str]:
     """
     pre-parser for evaluating and execution of Python expressions 
-    from within the REPL with the $python_command$ notation.
+    from within the REPL with the _python_command_ notation.
 
     Example of parsing:
 
@@ -51,7 +54,7 @@ def pre_parser(line: str, magick: bool = True) -> list[str]:
     boxes: dict[str, str] = {"(": ")", "{": "}", "[": "]"}
 
     if magick:
-        boxes.update({"$": "$"})
+        boxes.update({"_": "_"})
         # boxes.update({"\"": "\"", "'": "'"})
     lexed: list[str] = lexer(line, boxes)
 
@@ -68,13 +71,16 @@ def pre_parser(line: str, magick: bool = True) -> list[str]:
         if not isinstance(token, str):
             continue
 
-        if token.startswith("$*") and token.endswith("$"):
-            tokens: Any = eval(token[2:-1])
-            parsed_magick.extend(tokens)
+        if token.startswith("_*") and token.endswith("_"):
+            tokens: Any = safe_evaluation(token[2:-1])
+            if isinstance(tokens, Iterable):
+                parsed_magick.extend(map(str, tokens))
+            else:
+                raise TypeError("Cannot use starred expression with {type(tokens)}")
             continue
 
-        if token.startswith("$") and token.endswith("$"):
-            token: Any = eval(token.strip("$")) 
+        if token.startswith("_") and token.endswith("_"):
+            token: Any = safe_evaluation(token.strip("_")) 
         parsed_magick.append(str(token))
 
     return parsed_magick

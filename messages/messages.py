@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-error_messages_filepath: Path = (Path.cwd() / "messages/errors_en_US.json").resolve()
+error_messages_filepath: Path = (Path.cwd() / "messages/en_US.json").resolve()
 # TO-DO: change name to error_messages
 with open(error_messages_filepath, "r", encoding="utf8") as file:
     error_msg = json.load(file)

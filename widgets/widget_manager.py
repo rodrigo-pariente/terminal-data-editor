@@ -49,7 +49,7 @@ class WidgetManager:
                 pre_parsed: list[str] = pre_parser(line)
             except (KeyboardInterrupt):
                 sys.exit(0)
-            except (SyntaxError, IndexError, ValueError) as e:
+            except (SyntaxError, IndexError, ValueError, TypeError) as e:
                 if isinstance(e, SyntaxError):
                     message = "Bad syntax."
                     logger.error(message)

@@ -12,7 +12,7 @@ from typing import Any, TYPE_CHECKING
 from actions.action_exceptions import ActionError
 from parsing.repl_parser import AttemptToExitError, CommandParser
 from read_and_write import read_file, write_file
-from messages import change_language
+from messages.messages import change_language
 from utils.data_utils import cast_if_true, change_data_in_file, get_template
 from widgets.data_editor import DataEditor
 from widgets.file_navigator import FileNavigator
@@ -266,19 +266,25 @@ def print_help(wm: "WidgetManager", **_) -> None:
     _print_super_help(wm.parser, wm.active_widget.parser)
 
 # unespecific
+@common_parser.add_args("args", nargs="*", default="")
+@common_parser.add_cmd("print")
+def echo(_, args: list[str]) -> None:
+    """print args"""
+    print(" ".join(args))
+
 @common_parser.add_cmd("cls", "clear")
-def clear_screen(*_) -> None:
+def clear_screen(*_, **__) -> None:
     """Clean the screen without leaving the REPL"""
     os.system("cls" if os.name == "nt" else "clear")
 
 @common_parser.add_args("comment", nargs="*")
 @common_parser.add_cmd("#")
-def commentary(*_) -> None:
+def commentary(*_, **__) -> None:
     """commentary: does nothing."""
     pass
 
 @common_parser.add_cmd("exit", "quit", "q")
-def exit_repl(*_) -> None:
+def exit_repl(*_, **__) -> None:
     """Exits the application."""
     sys.exit(0)
 

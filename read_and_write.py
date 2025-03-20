@@ -15,7 +15,7 @@ from typing import Any
 import toml
 import yaml
 
-from messages import get_error_message
+from messages.messages import get_error_message
 
 
 logger = logging.getLogger(__name__)

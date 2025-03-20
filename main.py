@@ -102,10 +102,8 @@ def main():
         wm.run()
 
     else:
-        filepaths: list[Path] = [
-            (Path.cwd() / filepath).resolve()
-            for filepath in args.input_files
-        ]
+        filepaths: list[Path]
+        filepaths = [(Path.cwd() / fp).resolve() for fp in args.input_files]
 
         new_values: Any = cast_if_true(args.set, not args.literal_off)
 
