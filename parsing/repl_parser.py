@@ -193,3 +193,12 @@ class CommandParser(argparse.ArgumentParser):
 
             return command_parser
         return wrapper
+
+    @staticmethod
+    def add_flag(*args, **kwargs) -> Callable:
+        """Decorator for adding arguments to the newly made command."""
+        def wrapper(command_parser: Self) -> Self:
+            kwargs["action"] = "flag"
+            command_parser.add_argument(*args, **kwargs)
+            return command_parser
+        return wrapper

@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 
 common_parser = CommandParser(
     prog="Widget Manager", description="A widget orchestrator.",
-    commands_description="Commands to use 🌊"
+    commands_description="Commands to use 🌊", add_help=False,
+    prefix_chars="+"  # so super_help can be called with "-" prefix
 )
 
 # widget related
@@ -214,11 +215,55 @@ def print_widgets(wm: "WidgetManager") -> None:
     for i, data_editor in enumerate(wm.data_editors):
         print(f"file: {data_editor.filename} ({i})")
 
-@common_parser.add_cmd("help")
-def print_help(wm: "WidgetManager") -> None:
-    """print this help message."""
-    wm.parser.print_help()
-    wm.active_widget.parser.print_help()
+@common_parser.add_cmd("-h", "--help", add_help=False)
+def print_help(wm: "WidgetManager", **_) -> None:
+    """
+    Function to print a specially formatted help for the WidgetManager.
+    """
+    def _print_super_help(main_parser, rel_parser):
+        """Printer"""
+        formatter = _super_usage_formatter(main_parser, rel_parser)
+
+        # description 
+        formatter.add_text(main_parser.description)
+
+        # positionals, optionals and user-defined groups
+        action_groups = main_parser._action_groups + rel_parser._action_groups
+        
+        # so options are listed after positionals
+        action_groups_with_options_last = sorted(
+            action_groups, key=lambda g: g.title == "options"
+        )
+        for action_group in action_groups_with_options_last:
+            formatter.start_section(action_group.title)
+            if action_group.description:
+                formatter.add_text(action_group.description)
+            formatter.add_arguments(action_group._group_actions)
+            formatter.end_section()
+
+        # epilog
+        formatter.add_text(main_parser.epilog)
+
+        # determine help from format above
+        super_help = formatter.format_help()
+
+        main_parser._print_message(super_help, sys.stdout)
+
+    def _super_usage_formatter(main_parser, rel_parser):
+        """Formatter of usage"""
+        formatter = main_parser._get_formatter()
+
+        all_actions = list(set(main_parser._actions + rel_parser._actions))
+
+        main_mutually_exclusive = main_parser._mutually_exclusive_groups
+        rel_mutually_exclusive = rel_parser._mutually_exclusive_groups
+        groups = list(set(main_mutually_exclusive + rel_mutually_exclusive))
+
+        formatter.add_usage(main_parser.usage, all_actions, groups)
+
+        return formatter
+
+    _print_super_help(wm.parser, wm.active_widget.parser)
 
 # unespecific
 @common_parser.add_cmd("cls", "clear")
